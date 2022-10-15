@@ -1,0 +1,16 @@
+server
+    echo
+    
+    -time
+
+    -tcp
+    -udp
+
+
+
+client
+    -tcp
+    -udp
+
+both
+    exit

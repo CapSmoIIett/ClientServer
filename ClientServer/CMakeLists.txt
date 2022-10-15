@@ -3,7 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-# Добавьте источник в исполняемый файл этого проекта.
-add_executable (ClientServer "ClientServer.cpp" "ClientServer.h")
+#include_directories(&{PROJECT_SOURCE_DIR})
 
+add_subdirectory ("Client")
+add_subdirectory ("Server")
 # TODO: Добавьте тесты и целевые объекты, если это необходимо.
