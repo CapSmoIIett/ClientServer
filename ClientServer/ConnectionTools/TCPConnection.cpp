@@ -1,4 +1,5 @@
 #include "TCPConnection.h"
+
 #include <iostream>
 
 
@@ -26,16 +27,17 @@ bool TCPClient::Connect(const char* ip)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 
+	ADDRINFO* addrinfo;
 	// подключаемся к IP
 	GetPort() += 1;
-	if (getaddrinfo(ip, GetPortString().c_str(), &hints, &m_pAddrInfo) != 0)
+	if (getaddrinfo(ip, "8080", &hints, &addrinfo) != 0)
 		;//	return ShutdownProcess();
 
 	//addrResult->ai_next - если несколько мест куда можно подключиться
 
 	SOCKADDR_IN addr;
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	addr.sin_port = htons(1111);
+	addr.sin_addr.s_addr = inet_addr(ip); //"127.0.0.1");
+	addr.sin_port = htons(8080);
 	addr.sin_family = AF_INET;
 
 	//int result = bind(m_sConnectionSocket, (SOCKADDR*)&addr, sizeof(addr));
@@ -45,8 +47,8 @@ bool TCPClient::Connect(const char* ip)
 	if (m_sConnectionSocket == INVALID_SOCKET)
 		return ShutdownProcess();
 
-	int result = connect(m_sConnectionSocket, (SOCKADDR*)&addr, sizeof(addr));
-	//int result = connect(m_sConnectionSocket, m_pAddrInfo->ai_addr, m_pAddrInfo->ai_addrlen);
+	//int result = connect(m_sConnectionSocket, (SOCKADDR*)&addr, sizeof(addr));
+	int result = connect(m_sConnectionSocket, addrinfo->ai_addr, addrinfo->ai_addrlen);
 	if (result == SOCKET_ERROR)
 		return ShutdownProcess();
 
@@ -90,7 +92,7 @@ std::string TCPClient::Get()
 		amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
 
 		result += std::string(recvBuffer);
-	} while (amountBytes > 0);
+	} while (amountBytes > sizeof(recvBuffer));
 
 	return result;
 }
@@ -102,6 +104,52 @@ bool TCPClient::Send(std::string msg)
 
 	std::cout << "sended\n";
 
+}
+
+bool TCPClient::Disconnect()
+{
+	auto iResult = shutdown(m_sConnectionSocket, SD_SEND);
+	if (iResult == SOCKET_ERROR) {
+		printf("shutdown failed: %d\n", WSAGetLastError());
+		closesocket(m_sConnectionSocket);
+		WSACleanup();
+		return 1;
+	}
+}
+
+bool TCPClient::SendFile(std::fstream& file)
+{
+	char buffer[1024]; //выделяем блок 1 Кб
+	int readed = 0;
+
+	if (!file.is_open())
+		return false;
+
+	file.read(buffer, sizeof(buffer));
+	while ((readed = file.gcount()) != 0)
+	{
+		send(m_sConnectionSocket, (char*)buffer, readed, 0);
+		file.read(buffer, sizeof(buffer));
+	}
+
+	return true;
+}
+
+bool TCPClient::GetFile(std::fstream& file)
+{
+	char buffer[1024]; //выделяем блок 1 Кб
+	int len = 0;
+
+	if (!file.is_open())
+		return false;
+
+	do
+	{
+		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
+		file.write(buffer, len);
+	} while (len == sizeof(buffer));
+
+	return true;
 }
 
 
@@ -148,7 +196,7 @@ bool TCPServer::Connect()
 
 	SOCKADDR_IN addr;
 	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	addr.sin_port = htons(1111);
+	addr.sin_port = htons(8080);
 	addr.sin_family = AF_INET;
 
 	//int result = bind(m_sConnectionSocket, m_pAddrInfo->ai_addr, m_pAddrInfo->ai_addrlen);
@@ -162,15 +210,39 @@ bool TCPServer::Connect()
 	if (isClose)
 		return true;
 
-	SOCKET ClientSocket = accept(m_sConnectionSocket, NULL, NULL);
+	return false;
+}
+
+ConnectedDevice& TCPServer::Access()
+{
+	SOCKADDR_IN cs_addr;
+	socklen_t cs_addrsize = sizeof(cs_addr);
+	SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize);
+
 	if (ClientSocket == INVALID_SOCKET)
-		return ShutdownProcess();
+		return ConnectedDevice(ClientSocket, cs_addr, ConnectedDevice::Status::Disabled);
+
+	ConnectedDevice device(ClientSocket, cs_addr, ConnectedDevice::Status::Connected);
+
+	auto connectedDevice = std::find_if(m_vConnectedDevices.begin(), m_vConnectedDevices.end(), [cs_addr](auto second)
+		{
+			return cs_addr.sin_addr.s_addr == second.m_SockAddr.sin_addr.s_addr;
+		});
+
+	if (connectedDevice != m_vConnectedDevices.end())
+	{
+		device.m_CLInfo = connectedDevice->m_CLInfo;
+		*connectedDevice = device;
+		std::cout << "client reconect\n";
+		return device;
+	}
 
 	m_vSockets.push_back(ClientSocket);
+	m_vConnectedDevices.push_back(device);
+
 	std::cout << "client connected\n";
 
-
-	return false;
+	return device;
 }
 
 bool TCPServer::ShutdownProcess()
@@ -202,48 +274,98 @@ bool TCPServer::ShutdownProcess()
 	return false; 
 }
 
-bool TCPServer::StartEcho()
+std::string TCPServer::Get(ConnectedDevice& device)
 {
-	 //std::thread th([this]()
-		//{
-			char buffer[512];
+	int amountBytes = 0;
+	char recvBuffer[512];
+	std::string result;
 
-			if (isClose)
-				return true;
+	do
+	{
+		ZeroMemory(recvBuffer, sizeof(recvBuffer));
 
-	//		while (true)
-			{
-				for (auto ClientSocket : m_vSockets)
-				{
-					ZeroMemory(buffer, sizeof(buffer));
+		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
 
-					if (recv(ClientSocket, buffer, sizeof(buffer), 0) > 0)
-					{
-						std::cout << buffer << "\n";
-						if (send(ClientSocket, buffer, (int)strlen(buffer), 0) == SOCKET_ERROR)
-							return ShutdownProcess();
-					}
-				}
-			}
-	//	});
+		if (WSAGetLastError() == WSAECONNRESET)
+		{
+			device.m_Status = ConnectedDevice::Status::Disabled;
+			return "";
+		}
 
-	//th.detach();
+		result += std::string(recvBuffer);
+	} while (amountBytes >= sizeof(recvBuffer));
 
-	return false;
+	return result;
+}
+
+bool TCPServer::Send(ConnectedDevice& device, std::string msg)
+{
+	if (send(device.m_Socket, msg.c_str(), msg.size(), NULL) == SOCKET_ERROR)
+		return ShutdownProcess();
+
+	std::cout << "sended\n";
 
 }
 
-bool TCPServer::StartListening()
+bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 {
+	char buffer[1024]; //выделяем блок 1 Кб
+	int readed = 0;
+	int counter = 0;
 
-	//std::thread th([this]()
-	//	{
-	//		while (true)
-			{
-			}
-	//	});
+	if (!file.is_open())
+		return false;
 
-	//th.detach();
+	file.read(buffer, sizeof(buffer));
+	while ((readed = file.gcount()) != 0)
+	{
+		auto clock = std::chrono::high_resolution_clock::now();
 
-	return false;
+		send(device.m_Socket, (char*)buffer, readed, 0);
+		file.read(buffer, sizeof(buffer));
+
+		if (WSAGetLastError() == WSAECONNRESET)
+		{
+			device.m_Status = ConnectedDevice::Status::Disabled;
+			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * 1024, "");
+			return false;
+		}
+
+		counter++;
+		auto nanosec = clock.time_since_epoch();
+		std::cout << 1024 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+	}
+
+	return true;
+}
+
+bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
+{
+	char buffer[1024]; //выделяем блок 1 Кб
+	int len = 0;
+	int counter = 0;
+
+	if (!file.is_open())
+		return false;
+
+	do
+	{
+		auto clock = std::chrono::high_resolution_clock::now();
+
+		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+		file.write(buffer, len);
+
+		if (WSAGetLastError() == WSAECONNRESET)
+		{
+			device.m_Status = ConnectedDevice::Status::Disabled;
+			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * 1024, "");
+			return false;
+		}
+
+		counter++;
+		auto nanosec = clock.time_since_epoch();
+		std::cout << 1024 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+	} while (len == sizeof(buffer));
+
+	return true;
 }
