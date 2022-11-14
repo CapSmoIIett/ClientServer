@@ -22,50 +22,10 @@ int main()
 
 	bool isEcho = true;
 
-	std::cout << "Configure server" << '\n';
-	
-	// Command 
-/*
-	do
-	{
-		command.clear();
-		{
-			msg.clear();
-
-			std::getline(std::cin, msg);
-
-			std::transform(msg.begin(), msg.end(), msg.begin(),
-				[](unsigned char c) { return std::tolower(c); });
-
-			std::istringstream iSStream(msg);
-
-			// нужно добавить функцию проверки команд
-			std::string word;
-			while (iSStream >> word)
-				command.push_back(word);
-		}
-
-		if (command.size() <= 0)
-			continue;
-
-		if (command[0][0] == 'q')
-		{
-			return 0;
-		}
-
-		if (command[0] == "echo")
-		{
-			isEcho = true;
-		}
-
-	} while (command[0] != "start");
-	*/
-
 	server.Start();
 	std::cout << "Start server" << '\n';
 
 	server.Connect();
-
 	
 	// Command processing
 	while (true)

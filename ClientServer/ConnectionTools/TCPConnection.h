@@ -40,6 +40,7 @@ protected:
 	WSADATA m_pWsaData;
 	ADDRINFO* m_pAddrInfo;
 	SOCKET m_sConnectionSocket;
+	SOCKADDR_IN m_ConnectionAddress;
 };
 
 
@@ -107,7 +108,7 @@ struct ConnectedDevice
 
 	using Status = ConnectionStatus;
 
-	ConnectedDevice(SOCKET socket, SOCKADDR_IN sockaddr, ConnectionStatus status = Status::Disabled) :
+	ConnectedDevice(SOCKET& socket, SOCKADDR_IN sockaddr, ConnectionStatus status = Status::Disabled) :
 		m_Socket(socket), m_SockAddr(sockaddr), m_Status(status)
 	{ };
 
@@ -143,6 +144,7 @@ protected:
 	WSADATA m_pWsaData;
 	ADDRINFO* m_pAddrInfo;
 	SOCKET m_sConnectionSocket;
+	SOCKADDR_IN m_ServerAddress;
 
 	std::vector<SOCKET> m_vSockets;
 	std::vector<ConnectedDevice> m_vConnectedDevices;

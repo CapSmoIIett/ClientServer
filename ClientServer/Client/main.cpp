@@ -49,16 +49,10 @@ int main()
 
 		if (commands[0] == "connect")
 		{
-			if (commands.size() < 3)
-				continue;
+			if (commands.size() < 2)
+				commands.push_back("127.0.0.1");
 
-			if (commands[1] != "-ip")
-			{
-				std::cout << "Error" << "\n";
-				continue;
-			}
-
-			std::cout << client.Connect(commands[2].c_str()) << "\n";
+			std::cout << client.Connect(commands[1].c_str()) << "\n";
 
 			auto str = client.Get();
 
@@ -102,6 +96,9 @@ int main()
 			std::fstream file;
 			file.open(commands[1].c_str(), std::fstream::out | std::fstream::trunc | std::fstream::binary);
 
+			if (!file.is_open())
+				continue;
+
 			client.Send(commands[0] + " " + commands[1]);
 			client.GetFile(file);
 
@@ -111,6 +108,9 @@ int main()
 		{
 			std::fstream file;
 			file.open(commands[1], std::fstream::in | std::fstream::binary);
+
+			if (!file.is_open())
+				continue;
 
 			client.Send(commands[0] + " " + commands[1]);
 			client.SendFile(file);

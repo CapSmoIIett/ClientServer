@@ -13,6 +13,10 @@ TCPClient::TCPClient() :
 
 bool TCPClient::Start()
 {
+	m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	m_ConnectionAddress.sin_family = AF_INET;
+	m_ConnectionAddress.sin_port = htons(2000);
+
 	if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
 		return false;
 
@@ -20,38 +24,27 @@ bool TCPClient::Start()
 
 bool TCPClient::Connect(const char* ip)
 {
-	ADDRINFO hints;
+	int result = 0;
 
-	ZeroMemory(&hints, sizeof(hints));
-	hints.ai_family = AF_INET;			//IPv4
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
-
-	ADDRINFO* addrinfo;
-	// подключаемся к IP
-	GetPort() += 1;
-	if (getaddrinfo(ip, "8080", &hints, &addrinfo) != 0)
-		;//	return ShutdownProcess();
-
-	//addrResult->ai_next - если несколько мест куда можно подключиться
-
-	SOCKADDR_IN addr;
-	addr.sin_addr.s_addr = inet_addr(ip); //"127.0.0.1");
-	addr.sin_port = htons(8080);
-	addr.sin_family = AF_INET;
-
-	//int result = bind(m_sConnectionSocket, (SOCKADDR*)&addr, sizeof(addr));
-	// получения сокета
-	//m_sConnectionSocket = socket(m_pAddrInfo->ai_family, m_pAddrInfo->ai_socktype, m_pAddrInfo->ai_protocol);
-	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, NULL);
+	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_sConnectionSocket == INVALID_SOCKET)
-		return ShutdownProcess();
+	{
+		printf("Error: Invalid Socket (%d)\n", WSAGetLastError());
+		return false;
+	}
 
-	//int result = connect(m_sConnectionSocket, (SOCKADDR*)&addr, sizeof(addr));
-	int result = connect(m_sConnectionSocket, addrinfo->ai_addr, addrinfo->ai_addrlen);
-	if (result == SOCKET_ERROR)
-		return ShutdownProcess();
+	if (ip != nullptr)
+		m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip);
 
+	result = connect(m_sConnectionSocket, 
+		(struct sockaddr*)&m_ConnectionAddress, 
+		sizeof(m_ConnectionAddress));
+	if (result != 0)
+	{
+		printf("Error: Invalid Connection (%d)\n", WSAGetLastError());
+		return false;
+	}	
+	
 	std::cout << "connected";
 
 	return true;
@@ -167,6 +160,10 @@ TCPServer::TCPServer() :
 
 bool TCPServer::Start()
 {
+	m_ServerAddress.sin_addr.S_un.S_addr = INADDR_ANY;
+	m_ServerAddress.sin_family = AF_INET;
+	m_ServerAddress.sin_port = htons(2000);
+
 	if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
 		return false;
 
@@ -174,51 +171,38 @@ bool TCPServer::Start()
 
 bool TCPServer::Connect()
 {
-	ADDRINFO hints;
+	int result = 0;
 
-	ZeroMemory(&hints, sizeof(hints));
-	hints.ai_family = AF_INET;			//IPv4
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
-	hints.ai_flags = AI_PASSIVE;
-
-	// подключаемся к IP
-	if (getaddrinfo(NULL, GetPortString().c_str(), &hints, &m_pAddrInfo))
-		return ShutdownProcess();
-
-	//addrResult->ai_next - если несколько мест куда можно подключиться
-
-	// получения сокета
-	//m_sConnectionSocket = socket(m_pAddrInfo->ai_family, m_pAddrInfo->ai_socktype, m_pAddrInfo->ai_protocol);
-	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, NULL);
+	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_sConnectionSocket == INVALID_SOCKET)
-		return ShutdownProcess();
+	{
+		printf("Error: Invalid Socket (%d)\n", WSAGetLastError());
+		return false;
+	}
 
-	SOCKADDR_IN addr;
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	addr.sin_port = htons(8080);
-	addr.sin_family = AF_INET;
-
-	//int result = bind(m_sConnectionSocket, m_pAddrInfo->ai_addr, m_pAddrInfo->ai_addrlen);
-	int result = bind(m_sConnectionSocket, (SOCKADDR*)&addr, sizeof(addr));
+	result = bind(m_sConnectionSocket, (struct sockaddr*)&m_ServerAddress, sizeof(m_ServerAddress));
 	if (result == SOCKET_ERROR)
-		return ShutdownProcess();
+	{
+		printf("Error: Invalid Bind (%d)\n", WSAGetLastError());
+		return false;
+	}
 
-	if (listen(m_sConnectionSocket, SOMAXCONN) == SOCKET_ERROR)
-		return ShutdownProcess();
+	result = listen(m_sConnectionSocket, 5);
+	if (result == SOCKET_ERROR)
+	{
+		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
+		return false;
+	}
 
-	if (isClose)
-		return true;
-
-	return false;
+	return true;
 }
 
 ConnectedDevice& TCPServer::Access()
 {
 	SOCKADDR_IN cs_addr;
 	socklen_t cs_addrsize = sizeof(cs_addr);
-	SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize);
 
+	SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize);
 	if (ClientSocket == INVALID_SOCKET)
 		return ConnectedDevice(ClientSocket, cs_addr, ConnectedDevice::Status::Disabled);
 
@@ -316,6 +300,8 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	if (!file.is_open())
 		return false;
 
+	std::cout << "\n\n";
+
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
 	{
@@ -333,7 +319,8 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 		counter++;
 		auto nanosec = clock.time_since_epoch();
-		std::cout << 1024 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+		//std::cout << buffer << "\n";
+		std::cout << 1024 * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
 	return true;
@@ -364,7 +351,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		counter++;
 		auto nanosec = clock.time_since_epoch();
-		std::cout << 1024 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+		std::cout << 1024 * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	} while (len == sizeof(buffer));
 
 	return true;
