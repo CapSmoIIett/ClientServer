@@ -99,6 +99,9 @@ int main()
 				while (iSStream >> word)
 					cmd.push_back(word);
 			}
+			
+			if (cmd.empty())
+				continue;
 
 			if (cmd[0] == "upload")
 			{
@@ -135,7 +138,7 @@ int main()
 				server.Send(server.GetConnectedDevices()[0], msg);
 			}
 
-		} while (cmd[0] != "q");
+		} while (!cmd.empty() && cmd[0] != "q");
 	}
 
 
