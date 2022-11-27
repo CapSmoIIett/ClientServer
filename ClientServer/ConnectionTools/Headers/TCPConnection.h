@@ -41,6 +41,11 @@ public:
 
 	bool Disconnect();
 
+	bool isConnected()
+	{
+		return 0 == WSAGetLastError();
+	}
+
 protected:
 
 #ifdef OS_WINDOWS

@@ -55,6 +55,9 @@ int main()
 
 			std::cout << client.Connect(commands[1].c_str()) << "\n";
 
+			if (!client.isConnected())
+				continue;
+
 			auto str = client.Get();
 
 			ConnectionLostInfo clInfo;

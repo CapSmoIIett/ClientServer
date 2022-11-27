@@ -44,7 +44,7 @@ bool TCPClient::Connect(const char* ip)
 		printf("Error: Invalid Connection (%d)\n", WSAGetLastError());
 		return false;
 	}	
-	
+
 	std::cout << "connected";
 
 	return true;
@@ -113,6 +113,7 @@ bool TCPClient::Disconnect()
 bool TCPClient::SendFile(std::fstream& file)
 {
 	char buffer[1024]; //выделяем блок 1 Кб
+	int sended = 0;
 	int readed = 0;
 
 	if (!file.is_open())
@@ -121,7 +122,11 @@ bool TCPClient::SendFile(std::fstream& file)
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
 	{
-		send(m_sConnectionSocket, (char*)buffer, readed, 0);
+		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+	
+		if (sended != readed)
+			std::cout << "ERROR" << "\n";
+
 		file.read(buffer, sizeof(buffer));
 	}
 
@@ -140,7 +145,7 @@ bool TCPClient::GetFile(std::fstream& file)
 	{
 		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
 		file.write(buffer, len);
-	} while (len == sizeof(buffer));
+	} while (len != 0);
 
 	return true;
 }
