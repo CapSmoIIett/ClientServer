@@ -354,10 +354,13 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 			return false;
 		}
 
+		if (len < sizeof(buffer))
+			std::cout << "ERROR" << "\n";
+
 		counter++;
 		auto nanosec = clock.time_since_epoch();
 		std::cout << 1024 * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
-	} while (len == sizeof(buffer));
+	} while (len > 0);
 
 	return true;
 }
