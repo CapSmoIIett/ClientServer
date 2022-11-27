@@ -9,7 +9,7 @@
 #include <thread>
 
 
-#include "../ConnectionTools/TCPConnection.h"
+#include "../ConnectionTools/Headers/TCPConnection.h"
 
 int main()
 {

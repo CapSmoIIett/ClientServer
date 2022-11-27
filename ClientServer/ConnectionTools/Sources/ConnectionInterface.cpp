@@ -1,4 +1,4 @@
-#include "ConnectionInterface.h"
+#include "../Headers//ConnectionInterface.h"
 
 ConnectionInterface::ConnectionInterface() :
 	m_iPort(0)

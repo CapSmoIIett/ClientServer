@@ -1,11 +1,11 @@
-#include "TCPConnection.h"
+#include "../Headers/TCPConnection.h"
 
 #include <iostream>
 
 
 TCPClient::TCPClient() :
 	m_pWsaData(),
-	m_pAddrInfo(nullptr),
+//	m_pAddrInfo(nullptr),
 	m_sConnectionSocket(INVALID_SOCKET)
 {
 
@@ -53,11 +53,11 @@ bool TCPClient::Connect(const char* ip)
 
 bool TCPClient::ShutdownProcess()
 {
-	if (m_pAddrInfo != nullptr)
+	/*if (m_pAddrInfo != nullptr)
 	{
 		freeaddrinfo(m_pAddrInfo);
 		m_pAddrInfo = nullptr;
-	}
+	}*/
 
 	WSACleanup();
 
@@ -151,7 +151,7 @@ bool TCPClient::GetFile(std::fstream& file)
 
 TCPServer::TCPServer() :
 	m_pWsaData(),
-	m_pAddrInfo(nullptr),
+	//m_pAddrInfo(nullptr),
 	m_sConnectionSocket(INVALID_SOCKET)
 {
 	isClose = false;
@@ -231,11 +231,11 @@ ConnectedDevice& TCPServer::Access()
 
 bool TCPServer::ShutdownProcess()
 {
-	if (m_pAddrInfo != nullptr)
+	/*if (m_pAddrInfo != nullptr)
 	{
 		freeaddrinfo(m_pAddrInfo);
 		m_pAddrInfo = nullptr;
-	}
+	}*/
 
 	WSACleanup();
 

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "ConnectionInterface.h"
-#include "../OSDefines.h"
+#include "../../OSDefines.h"
+#include "ConnectedDevice.h"
 
 #include <thread>
 #include <vector>
@@ -13,10 +14,12 @@
 	#include <WinSock2.h> 
 	#include <WS2tcpip.h>
 #else
-	#include <sys/types.h>
 	#include <sys/socket.h>
 	#include <netinet/in.h>
+	#include <netinet/tcp.h>
 	#include <unistd.h>
+	#include <stdio.h>
+	#include <stdlib.h>
 #endif
 
 
@@ -37,88 +40,19 @@ public:
 	bool Disconnect();
 
 protected:
+
+#ifdef OS_WINDOWS
 	WSADATA m_pWsaData;
-	ADDRINFO* m_pAddrInfo;
 	SOCKET m_sConnectionSocket;
+#else
+	int m_sConnectionSocket;
+#endif
 	SOCKADDR_IN m_ConnectionAddress;
+	//ADDRINFO * m_pAddrInfo;
 };
 
 
-struct ConnectionLostInfo
-{
-	enum Status
-	{
-		none = 0,
-		upload,
-		download
-	};
 
-	ConnectionLostInfo(Status s = none, long b = 0, std::string n = "") :
-		m_Status(s), m_iBytesAlredy(b), m_sFileName(n)
-	{ };
-
-	std::string Write()
-	{
-		std::string str;
-
-		str += std::to_string(m_Status) + ",";
-		str += std::to_string(m_iBytesAlredy) + ",";
-		str += m_sFileName + ",";
-
-		return str;
-	}
-
-	void Read(std::string str)
-	{
-		std::string substr;
-		int left = 0;
-		int right = 0;
-
-		right = str.find(",");
-
-		m_Status = atoi(str.substr(left, right).c_str());
-
-		left = right;
-		right = str.find(",", left + 1);
-
-		m_iBytesAlredy = atoi(str.substr(left + 1, right).c_str());
-
-		left = right;
-		right = str.find(",", left + 1);
-
-		if (right - left > 1)
-			m_sFileName = str.substr(left + 1, right -left - 1);
-		else
-			m_sFileName = "";
-	}
-
-	int m_Status;
-	long m_iBytesAlredy;
-	std::string m_sFileName;
-
-};
-
-struct ConnectedDevice
-{
-	enum class ConnectionStatus
-	{
-		Disabled = 0,
-		Connected
-	};
-
-	using Status = ConnectionStatus;
-
-	ConnectedDevice(SOCKET& socket, SOCKADDR_IN sockaddr, ConnectionStatus status = Status::Disabled) :
-		m_Socket(socket), m_SockAddr(sockaddr), m_Status(status)
-	{ };
-
-
-	SOCKET m_Socket;
-	SOCKADDR_IN m_SockAddr;
-	ConnectionStatus m_Status;
-	ConnectionLostInfo m_CLInfo;
-
-};
 
 class TCPServer : public ConnectionInterface 
 {
@@ -141,7 +75,11 @@ public:
 	}
 
 protected:
+
+#ifdef OS_WINDOWS
 	WSADATA m_pWsaData;
+#endif
+
 	ADDRINFO* m_pAddrInfo;
 	SOCKET m_sConnectionSocket;
 	SOCKADDR_IN m_ServerAddress;
