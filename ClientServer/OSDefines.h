@@ -7,3 +7,5 @@
 #else
 	#error unsupported platform
 #endif
+
+#define KB 1024

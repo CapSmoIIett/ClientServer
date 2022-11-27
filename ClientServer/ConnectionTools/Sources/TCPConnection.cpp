@@ -3,6 +3,7 @@
 #include <iostream>
 
 
+
 TCPClient::TCPClient() :
 	m_pWsaData(),
 //	m_pAddrInfo(nullptr),
@@ -112,7 +113,7 @@ bool TCPClient::Disconnect()
 
 bool TCPClient::SendFile(std::fstream& file)
 {
-	char buffer[1024]; //выделяем блок 1 Кб
+	char buffer[KB]; //выделяем блок 1 Кб
 	int sended = 0;
 	int readed = 0;
 
@@ -135,7 +136,7 @@ bool TCPClient::SendFile(std::fstream& file)
 
 bool TCPClient::GetFile(std::fstream& file)
 {
-	char buffer[1024]; //выделяем блок 1 Кб
+	char buffer[KB]; //выделяем блок 1 Кб
 	int len = 0;
 
 	if (!file.is_open())
@@ -298,7 +299,7 @@ bool TCPServer::Send(ConnectedDevice& device, std::string msg)
 
 bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 {
-	char buffer[1024]; //выделяем блок 1 Кб
+	char buffer[KB]; //выделяем блок 1 Кб
 	int readed = 0;
 	int counter = 0;
 
@@ -318,14 +319,14 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		if (WSAGetLastError() == WSAECONNRESET)
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
-			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * 1024, "");
+			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * KB, "");
 			return false;
 		}
 
 		counter++;
 		auto nanosec = clock.time_since_epoch();
 		//std::cout << buffer << "\n";
-		std::cout << 1024 * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+		std::cout << KB * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
 	return true;
@@ -333,7 +334,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 {
-	char buffer[1024]; //выделяем блок 1 Кб
+	char buffer[KB]; //выделяем блок 1 Кб
 	int len = 0;
 	int counter = 0;
 
@@ -350,7 +351,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		if (WSAGetLastError() == WSAECONNRESET)
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
-			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * 1024, "");
+			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * KB, "");
 			return false;
 		}
 
@@ -359,7 +360,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		counter++;
 		auto nanosec = clock.time_since_epoch();
-		std::cout << 1024 * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+		std::cout << KB * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	} while (len > 0);
 
 	return true;
