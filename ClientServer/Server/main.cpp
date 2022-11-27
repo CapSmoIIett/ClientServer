@@ -36,54 +36,48 @@ int main()
 
 		if (!server.GetConnectedDevices()[0].m_CLInfo.m_sFileName.empty())
 		{
-			auto clInfo = server.GetConnectedDevices()[0].m_CLInfo;
-			switch (clInfo.m_Status)
-			{
-			case ConnectionLostInfo::upload:
+			CLItoCMD(server.GetConnectedDevices()[0].m_CLInfo, cmd);
+
+			if (cmd[0] == "reupload")
 			{
 				std::fstream file;
-				file.open(clInfo.m_sFileName, std::fstream::out | std::fstream::app | std::fstream::binary);
+				file.open(cmd[1], std::fstream::out | std::fstream::app | std::fstream::binary);
 
 				server.GetFile(server.GetConnectedDevices()[0], file);
 
 				if ((server.GetConnectedDevices()[0]).m_Status == ConnectedDevice::Status::Disabled)
 				{
-					server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = clInfo.m_sFileName;
-					server.GetConnectedDevices()[0].m_CLInfo.m_iBytesAlredy += clInfo.m_iBytesAlredy;
+					server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = cmd[1];
+					server.GetConnectedDevices()[0].m_CLInfo.m_iBytesAlredy += atoi(cmd[2].c_str());
 					break;
 				}
 
 				file.close();
-				break;
 			}
-
-			case ConnectionLostInfo::download:
+			else if (cmd[0] == "redownload")
 			{
 				std::fstream file;
-				file.open(clInfo.m_sFileName, std::fstream::in | std::fstream::binary);
+				file.open(cmd[1], std::fstream::in | std::fstream::binary);
 
-				file.seekp(clInfo.m_iBytesAlredy, std::ios::beg);
+				file.seekp(atoi(cmd[2].c_str()), std::ios::beg);
 
 				server.SendFile(server.GetConnectedDevices()[0], file);
 
 				if ((server.GetConnectedDevices()[0]).m_Status == ConnectedDevice::Status::Disabled)
 				{
-					server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = clInfo.m_sFileName;
-					server.GetConnectedDevices()[0].m_CLInfo.m_iBytesAlredy += clInfo.m_iBytesAlredy;
+					server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = cmd[1];
+					server.GetConnectedDevices()[0].m_CLInfo.m_iBytesAlredy += atoi(cmd[2].c_str());
 					break;
 				}
 
 				file.close();
-
-				break;
 			}
-			}
-
 		}
 
 		do
 		{
 			cmd.clear();
+
 			{
 				std::string word;
 				std::string msgLow;

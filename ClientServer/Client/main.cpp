@@ -23,6 +23,7 @@ int main()
 	do
 	{
 		commands.clear();
+
 		{
 			msg.clear();
 
@@ -59,34 +60,10 @@ int main()
 			ConnectionLostInfo clInfo;
 			clInfo.Read(str);
 
-			switch (clInfo.m_Status)
-			{
-			case ConnectionLostInfo::upload:
-			{
-				std::fstream file;
-				file.open(clInfo.m_sFileName, std::fstream::in | std::fstream::binary);
-
-				file.seekp(clInfo.m_iBytesAlredy, std::ios::beg);
-
-				client.SendFile(file);
-
-				file.close();
-				break;
-			}
-
-			case ConnectionLostInfo::download:
-			{
-				std::fstream file;
-				file.open(clInfo.m_sFileName, std::fstream::out | std::fstream::app | std::fstream::binary);
-
-				client.GetFile(file);
-
-				file.close();
-				break;
-			}
-			}
+			CLItoCMD(clInfo, commands);
 		}
-		else if (commands[0] == "send")
+
+		if (commands[0] == "send")
 		{
 			auto sizeOfCommand = sizeof("send");
 			client.Send(msg.substr(sizeOfCommand, msg.size() - sizeOfCommand));
@@ -121,6 +98,27 @@ int main()
 		{
 			std::cout << client.Get() << "\n";
 		}
+		else if (commands[0] == "reupload")
+		{
+			std::fstream file;
+			file.open(commands[1], std::fstream::in | std::fstream::binary);
+
+			file.seekp(atoi(commands[2].c_str()), std::ios::beg);
+
+			client.SendFile(file);
+
+			file.close();
+		}
+		else if (commands[0] == "redownload")
+		{
+			std::fstream file;
+			file.open(commands[1], std::fstream::out | std::fstream::app | std::fstream::binary);
+
+			client.GetFile(file);
+
+			file.close();
+		}
+
 		else if (commands[0] == "disconnect")
 		{
 			client.Disconnect();

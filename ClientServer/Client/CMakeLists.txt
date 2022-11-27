@@ -12,7 +12,7 @@ endif()
 
 
 # Добавьте источник в исполняемый файл этого проекта.
-add_executable (Client "main.cpp" "../ConnectionTools/Headers/ConnectionInterface.h" "../ConnectionTools/Sources/TCPConnection.cpp" "../OSDefines.h" "../ConnectionTools/Headers/TCPConnection.h" "../ConnectionTools/Sources/ConnectionInterface.cpp" "../ConnectionTools/Headers/ClientServer.h")
+add_executable (Client "main.cpp" "../ConnectionTools/Headers/ConnectionInterface.h" "../ConnectionTools/Sources/TCPConnection.cpp" "../OSDefines.h" "../ConnectionTools/Headers/TCPConnection.h" "../ConnectionTools/Sources/ConnectionInterface.cpp" "../ConnectionTools/Headers/ClientServer.h" "../ConnectionTools/Sources/ConnectionLostInfo.cpp")
 
 if(WIN32)
 	target_link_libraries(Client wsock32 ws2_32)

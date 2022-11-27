@@ -1,4 +1,8 @@
+#pragma once
+
 #include <string>
+#include <vector>
+
 
 struct ConnectionLostInfo
 {
@@ -39,6 +43,8 @@ struct ConnectionLostInfo
 
 		m_iBytesAlredy = atoi(str.substr(left + 1, right).c_str());
 
+		m_iBytesAlredy = m_iBytesAlredy < 0 ? 0 : m_iBytesAlredy;
+
 		left = right;
 		right = str.find(",", left + 1);
 
@@ -53,3 +59,5 @@ struct ConnectionLostInfo
 	std::string m_sFileName;
 
 };
+
+void CLItoCMD(const ConnectionLostInfo& cli, std::vector<std::string>& cmd);

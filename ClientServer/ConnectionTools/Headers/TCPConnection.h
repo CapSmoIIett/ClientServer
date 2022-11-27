@@ -4,6 +4,8 @@
 #include "../../OSDefines.h"
 #include "ConnectedDevice.h"
 
+#pragma once
+
 #include <thread>
 #include <vector>
 #include <fstream>
