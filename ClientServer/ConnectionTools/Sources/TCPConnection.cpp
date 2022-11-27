@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#define EOF "EOFEOF"
 
 
 TCPClient::TCPClient() :
@@ -131,6 +132,8 @@ bool TCPClient::SendFile(std::fstream& file)
 		file.read(buffer, sizeof(buffer));
 	}
 
+	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
+
 	return true;
 }
 
@@ -145,6 +148,10 @@ bool TCPClient::GetFile(std::fstream& file)
 	do
 	{
 		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
+
+		if (strcmp(buffer, EOF) == 0)
+			break;
+
 		file.write(buffer, len);
 	} while (len != 0);
 
@@ -329,6 +336,8 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		std::cout << KB * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
+	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
+
 	return true;
 }
 
@@ -346,6 +355,10 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		auto clock = std::chrono::high_resolution_clock::now();
 
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+
+		if (strcmp(buffer, EOF) == 0)
+			break;
+
 		file.write(buffer, len);
 
 		if (WSAGetLastError() == WSAECONNRESET)
