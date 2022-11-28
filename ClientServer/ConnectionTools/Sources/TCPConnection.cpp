@@ -34,6 +34,7 @@ bool TCPClient::Start()
 		return false;
 #endif
 
+	return true;
 }
 
 bool TCPClient::Connect(const char* ip)
@@ -53,7 +54,7 @@ bool TCPClient::Connect(const char* ip)
 #if defined(OS_WINDOWS)
 		m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip);
 #else
-		m_ConnectionAddress.sin_addr.s_addr = in_addr(ip);
+		inet_aton(ip, &m_ConnectionAddress.sin_addr)
 #endif
 
 	result = connect(m_sConnectionSocket, 
