@@ -31,7 +31,7 @@ struct ConnectedDevice
 		m_Socket(socket), m_SockAddr(sockaddr), m_Status(status)
 	{ };
 #else
-	ConnectedDevice(int& socket, SOCKADDR_IN sockaddr, ConnectionStatus status = Status::Disabled) :
+	ConnectedDevice(int& socket, sockaddr_in sockaddr, ConnectionStatus status = Status::Disabled) :
 		m_Socket(socket), m_SockAddr(sockaddr), m_Status(status)
 	{ };
 #endif 
@@ -45,7 +45,7 @@ struct ConnectedDevice
 #if defined(OS_WINDOWS)
 	SOCKADDR_IN m_SockAddr;
 #else
-	sockaddr_in m_SockAddr;
+	struct sockaddr_in m_SockAddr;
 #endif
 
 	ConnectionStatus m_Status;

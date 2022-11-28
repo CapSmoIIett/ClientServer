@@ -1,6 +1,7 @@
 #include "../Headers/TCPConnection.h"
 
 #include <iostream>
+#include <string>
 
 #define MEOF "EOF"
 #define MSG_SIZE KB
@@ -50,7 +51,7 @@ bool TCPClient::Connect(const char* ip)
 #if defined(OS_WINDOWS)
 		m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip);
 #else
-		m_ConnectionAddress.sin_addr.S_addr = inet_addr(ip);
+		m_ConnectionAddress.sin_addr.s_addr = in_addr(ip);
 #endif
 
 	result = connect(m_sConnectionSocket, 
@@ -85,7 +86,13 @@ bool TCPClient::ShutdownProcess()
 	if (m_sConnectionSocket != INVALID_SOCKET)
 	{
 		shutdown(m_sConnectionSocket, SD_BOTH);
+
+
+#if defined(OS_WINDOWS)
 		closesocket(m_sConnectionSocket);
+#else
+		close(m_sConnectionSocket);
+#endif
 		m_sConnectionSocket = INVALID_SOCKET;
 	}
 
@@ -113,19 +120,28 @@ std::string TCPClient::Get()
 
 bool TCPClient::Send(std::string msg)
 {
-	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), NULL) == SOCKET_ERROR)
-		return ShutdownProcess();
 
+#if defined(OS_WINDOWS)
+	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
+		return ShutdownProcess();
+#else 
+	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) < 0)
+		return ShutdownProcess();
+#endif 
 }
 
 bool TCPClient::Disconnect()
 {
 	auto iResult = shutdown(m_sConnectionSocket, SD_SEND);
+#if defined(OS_WINDOWS)
 	if (iResult == SOCKET_ERROR) {
 		printf("shutdown failed: %d\n", WSAGetLastError());
-		closesocket(m_sConnectionSocket);
-#if defined(OS_WINDOWS)
 		WSACleanup();
+		closesocket(m_sConnectionSocket);
+#else
+	if (iResult < 0) {
+		printf("shutdown failed: %d\n", WSAGetLastError());
+		close(m_sConnectionSocket);
 #endif
 		return 1;
 	}
@@ -151,7 +167,11 @@ bool TCPClient::SendFile(std::fstream& file)
 		file.read(buffer, sizeof(buffer));
 	}
 
+#if defined(OS_WINDOWS)
 	Sleep(1000);
+#else
+	sleep(1000);
+#endif
 
 	send(m_sConnectionSocket, (char*)MEOF, sizeof(MEOF), 0);
 
@@ -227,19 +247,25 @@ bool TCPServer::Connect()
 	}
 
 	result = bind(m_sConnectionSocket, (struct sockaddr*)&m_ServerAddress, sizeof(m_ServerAddress));
+#if defined(OS_WINDOWS)
 	if (result == SOCKET_ERROR)
 	{
-#if defined(OS_WINDOWS)
 		printf("Error: Invalid Bind (%d)\n", WSAGetLastError());
+#else
+	if (result < 0)
+	{
 #endif
 		return false;
 	}
 
 	result = listen(m_sConnectionSocket, 5);
+#if defined(OS_WINDOWS)
 	if (result == SOCKET_ERROR)
 	{
-#if defined(OS_WINDOWS)
 		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
+#else
+	if (result < 0)
+	{
 #endif
 		return false;
 	}
@@ -249,10 +275,20 @@ bool TCPServer::Connect()
 
 ConnectedDevice& TCPServer::Access()
 {
+#if defined(OS_WINDOWS)
 	SOCKADDR_IN cs_addr;
+#else 
+	sockaddr_in cs_addr;
+#endif
+
 	socklen_t cs_addrsize = sizeof(cs_addr);
 
+#if defined(OS_WINDOWS)
 	SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize);
+#else
+	int ClientSocket = accept(m_sConnectionSocket, (sockaddr*) &cs_addr, &cs_addrsize);
+#endif
+
 	if (ClientSocket == INVALID_SOCKET)
 		return ConnectedDevice(ClientSocket, cs_addr, ConnectedDevice::Status::Disabled);
 
@@ -292,7 +328,11 @@ bool TCPServer::ShutdownProcess()
 	if (m_sConnectionSocket != INVALID_SOCKET)
 	{
 		shutdown(m_sConnectionSocket, SD_BOTH);
+#if defined(OS_WINDOWS)
 		closesocket(m_sConnectionSocket);
+#else
+		close(m_sConnectionSocket);
+#endif
 		m_sConnectionSocket = INVALID_SOCKET;
 	}
 
@@ -301,7 +341,11 @@ bool TCPServer::ShutdownProcess()
 	for (auto socket : m_vSockets)
 	{
 		shutdown(socket, SD_BOTH);
+#if defined(OS_WINDOWS)
 		closesocket(socket);
+#else
+		close(socket);
+#endif
 		socket = INVALID_SOCKET;
 	}
 
@@ -334,8 +378,13 @@ std::string TCPServer::Get(ConnectedDevice& device)
 
 bool TCPServer::Send(ConnectedDevice& device, std::string msg)
 {
-	if (send(device.m_Socket, msg.c_str(), msg.size(), NULL) == SOCKET_ERROR)
+#if defined(OS_WINDOWS)
+	if (send(device.m_Socket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
 		return ShutdownProcess();
+#else 
+	if (send(device.m_Socket, msg.c_str(), msg.size(), 0) < 0)
+		return ShutdownProcess();
+#endif 
 
 }
 
@@ -371,7 +420,11 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		std::cout << MSG_SIZE * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
+#if defined(OS_WINDOWS)
 	Sleep(1000);
+#else
+	sleep(1000);
+#endif
 
 	send(device.m_Socket, (char*)MEOF, sizeof(MEOF), 0);
 

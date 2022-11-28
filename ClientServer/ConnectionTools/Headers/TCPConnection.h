@@ -47,7 +47,7 @@ public:
 #ifdef OS_WINDOWS
 		return 0 == WSAGetLastError();
 #else
-		return 
+		return true;
 #endif
 	}
 
@@ -101,7 +101,7 @@ protected:
 
 #endif
 
-	ADDRINFO* m_pAddrInfo;
+	//ADDRINFO* m_pAddrInfo;
 
 	std::vector<ConnectedDevice> m_vConnectedDevices;
 
