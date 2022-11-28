@@ -329,7 +329,9 @@ bool TCPServer::ShutdownProcess()
 		m_pAddrInfo = nullptr;
 	}*/
 
+#if defined(OS_WINDOWS)
 	WSACleanup();
+#endif
 
 	if (m_sConnectionSocket != INVALID_SOCKET)
 	{

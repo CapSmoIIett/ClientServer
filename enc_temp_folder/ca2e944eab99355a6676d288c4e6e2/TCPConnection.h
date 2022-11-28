@@ -26,11 +26,7 @@
 
 #ifdef OS_POSIX
 	#define SOCKADDR_IN -1
-	#define INVALID_SOCKET -1
-
-	#define SD_SEND    SHUT_WR
-	#define SD_RECEIVE SHUT_RD
-	#define SD_BOTH    SHUT_RDWR
+	#define SD_BOTH 0
 #endif
 
 class TCPClient : public ConnectionInterface
