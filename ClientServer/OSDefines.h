@@ -9,3 +9,4 @@
 #endif
 
 #define KB 1024
+#define MB 1048576
