@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <algorithm>
 
 #define MEOF "EOF"
 #define MSG_SIZE KB
@@ -110,11 +109,7 @@ std::string TCPClient::Get()
 
 	do
 	{
-#if defined(OS_WINDOWS)
 		ZeroMemory(recvBuffer, sizeof(recvBuffer));
-#else
-		memset(recvBuffer, 0, sizeof(recvBuffer));
-#endif
 
 		amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
 
@@ -150,7 +145,6 @@ bool TCPClient::Disconnect()
 #endif
 		return 1;
 	}
-	return false;
 }
 
 bool TCPClient::SendFile(std::fstream& file)
@@ -366,19 +360,11 @@ std::string TCPServer::Get(ConnectedDevice& device)
 
 	do
 	{
-#if defined(OS_WINDOWS)
 		ZeroMemory(recvBuffer, sizeof(recvBuffer));
-#else
-		memset(recvBuffer, 0, sizeof(recvBuffer));
-#endif
 
 		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
 
-#if defined(OS_WINDOWS)
 		if (WSAGetLastError() == WSAECONNRESET)
-#else
-		if (amountBytes < 0)
-#endif
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
 			return "";
@@ -400,7 +386,6 @@ bool TCPServer::Send(ConnectedDevice& device, std::string msg)
 		return ShutdownProcess();
 #endif 
 
-	return false;
 }
 
 bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
@@ -408,7 +393,6 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
 	int readed = 0;
 	int counter = 0;
-	int sended = 0;
 
 	if (!file.is_open())
 		return false;
@@ -420,14 +404,10 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	{
 		auto clock = std::chrono::high_resolution_clock::now();
 
-		sended = send(device.m_Socket, (char*)buffer, readed, 0);
+		send(device.m_Socket, (char*)buffer, readed, 0);
 		file.read(buffer, sizeof(buffer));
 
-#if defined(OS_WINDOWS)
 		if (WSAGetLastError() == WSAECONNRESET)
-#else
-		if (sended < 0)
-#endif
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * MSG_SIZE, "");
@@ -471,11 +451,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		file.write(buffer, len);
 
-#if defined(OS_WINDOWS)
 		if (WSAGetLastError() == WSAECONNRESET)
-#else
-		if (len < 0)
-#endif
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");

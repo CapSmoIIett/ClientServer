@@ -24,6 +24,10 @@
 	#include <stdlib.h>
 #endif
 
+#ifdef OS_POSIX
+	#define SOCKADDR_IN -1
+	#define SD_BOTH 0
+#endif
 
 class TCPClient : public ConnectionInterface
 {

@@ -12,9 +12,3 @@
 #define MB 1048576
 
 
-
-#ifdef OS_POSIX
-	#define SOCKADDR_IN -1
-	#define SD_BOTH 0
-
-#endif
