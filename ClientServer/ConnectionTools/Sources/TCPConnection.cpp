@@ -174,12 +174,20 @@ TCPServer::TCPServer() :
 
 bool TCPServer::Start()
 {
+#if defined(OS_WINDOWS)
 	m_ServerAddress.sin_addr.S_un.S_addr = INADDR_ANY;
+#else
+	m_ServerAddress.sin_addr.s_addr = INADDR_ANY;
+#endif
 	m_ServerAddress.sin_family = AF_INET;
 	m_ServerAddress.sin_port = htons(2000);
 
+#if defined(OS_WINDOWS)
 	if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
 		return false;
+#endif
+
+	return true;
 
 }
 
