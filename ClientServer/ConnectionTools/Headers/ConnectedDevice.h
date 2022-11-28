@@ -26,13 +26,28 @@ struct ConnectedDevice
 
 	using Status = ConnectionStatus;
 
+#if defined(OS_WINDOWS)
 	ConnectedDevice(SOCKET& socket, SOCKADDR_IN sockaddr, ConnectionStatus status = Status::Disabled) :
 		m_Socket(socket), m_SockAddr(sockaddr), m_Status(status)
 	{ };
+#else
+	ConnectedDevice(int& socket, SOCKADDR_IN sockaddr, ConnectionStatus status = Status::Disabled) :
+		m_Socket(socket), m_SockAddr(sockaddr), m_Status(status)
+	{ };
+#endif 
 
-
+#if defined(OS_WINDOWS)
 	SOCKET m_Socket;
+#else
+	int m_Socket;
+#endif
+
+#if defined(OS_WINDOWS)
 	SOCKADDR_IN m_SockAddr;
+#else
+	sockaddr_in m_SockAddr;
+#endif
+
 	ConnectionStatus m_Status;
 	ConnectionLostInfo m_CLInfo;
 

@@ -2,12 +2,14 @@
 
 #include <iostream>
 
-#define EOF "EOF"
+#define MEOF "EOF"
 #define MSG_SIZE KB
 
 
 TCPClient::TCPClient() :
+#if defined(OS_WINDOWS)
 	m_pWsaData(),
+#endif
 //	m_pAddrInfo(nullptr),
 	m_sConnectionSocket(INVALID_SOCKET)
 {
@@ -16,12 +18,18 @@ TCPClient::TCPClient() :
 
 bool TCPClient::Start()
 {
+#if defined(OS_WINDOWS)
 	m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+#else
+	m_ConnectionAddress.sin_addr.s_addr = INADDR_ANY;
+#endif
 	m_ConnectionAddress.sin_family = AF_INET;
 	m_ConnectionAddress.sin_port = htons(2000);
 
+#if defined(OS_WINDOWS)
 	if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
 		return false;
+#endif
 
 }
 
@@ -32,19 +40,27 @@ bool TCPClient::Connect(const char* ip)
 	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_sConnectionSocket == INVALID_SOCKET)
 	{
+#if defined(OS_WINDOWS)
 		printf("Error: Invalid Socket (%d)\n", WSAGetLastError());
+#endif
 		return false;
 	}
 
 	if (ip != nullptr)
+#if defined(OS_WINDOWS)
 		m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip);
+#else
+		m_ConnectionAddress.sin_addr.S_addr = inet_addr(ip);
+#endif
 
 	result = connect(m_sConnectionSocket, 
 		(struct sockaddr*)&m_ConnectionAddress, 
 		sizeof(m_ConnectionAddress));
 	if (result != 0)
 	{
+#if defined(OS_WINDOWS)
 		printf("Error: Invalid Connection (%d)\n", WSAGetLastError());
+#endif
 		return false;
 	}	
 
@@ -62,7 +78,9 @@ bool TCPClient::ShutdownProcess()
 		m_pAddrInfo = nullptr;
 	}*/
 
+#if defined(OS_WINDOWS)
 	WSACleanup();
+#endif
 
 	if (m_sConnectionSocket != INVALID_SOCKET)
 	{
@@ -106,7 +124,9 @@ bool TCPClient::Disconnect()
 	if (iResult == SOCKET_ERROR) {
 		printf("shutdown failed: %d\n", WSAGetLastError());
 		closesocket(m_sConnectionSocket);
+#if defined(OS_WINDOWS)
 		WSACleanup();
+#endif
 		return 1;
 	}
 }
@@ -133,7 +153,7 @@ bool TCPClient::SendFile(std::fstream& file)
 
 	Sleep(1000);
 
-	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
+	send(m_sConnectionSocket, (char*)MEOF, sizeof(MEOF), 0);
 
 	return true;
 }
@@ -150,7 +170,7 @@ bool TCPClient::GetFile(std::fstream& file)
 	{
 		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
 
-		if (strcmp(buffer, EOF) == 0)
+		if (strcmp(buffer, MEOF) == 0)
 			break;
 
 		file.write(buffer, len);
@@ -164,7 +184,9 @@ bool TCPClient::GetFile(std::fstream& file)
 
 
 TCPServer::TCPServer() :
+#if defined(OS_WINDOWS)
 	m_pWsaData(),
+#endif
 	//m_pAddrInfo(nullptr),
 	m_sConnectionSocket(INVALID_SOCKET)
 {
@@ -198,21 +220,27 @@ bool TCPServer::Connect()
 	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_sConnectionSocket == INVALID_SOCKET)
 	{
+#if defined(OS_WINDOWS)
 		printf("Error: Invalid Socket (%d)\n", WSAGetLastError());
+#endif
 		return false;
 	}
 
 	result = bind(m_sConnectionSocket, (struct sockaddr*)&m_ServerAddress, sizeof(m_ServerAddress));
 	if (result == SOCKET_ERROR)
 	{
+#if defined(OS_WINDOWS)
 		printf("Error: Invalid Bind (%d)\n", WSAGetLastError());
+#endif
 		return false;
 	}
 
 	result = listen(m_sConnectionSocket, 5);
 	if (result == SOCKET_ERROR)
 	{
+#if defined(OS_WINDOWS)
 		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
+#endif
 		return false;
 	}
 
@@ -345,7 +373,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 	Sleep(1000);
 
-	send(device.m_Socket, (char*)EOF, sizeof(EOF), 0);
+	send(device.m_Socket, (char*)MEOF, sizeof(MEOF), 0);
 
 	return true;
 }
@@ -365,7 +393,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
 
-		if (strcmp(buffer, EOF) == 0)
+		if (strcmp(buffer, MEOF) == 0)
 			break;
 
 		file.write(buffer, len);

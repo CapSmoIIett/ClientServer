@@ -41,9 +41,14 @@ public:
 
 	bool Disconnect();
 
+
 	bool isConnected()
 	{
+#ifdef OS_WINDOWS
 		return 0 == WSAGetLastError();
+#else
+		return 
+#endif
 	}
 
 protected:
@@ -51,11 +56,12 @@ protected:
 #ifdef OS_WINDOWS
 	WSADATA m_pWsaData;
 	SOCKET m_sConnectionSocket;
+	SOCKADDR_IN m_ConnectionAddress;
 #else
 	int m_sConnectionSocket;
+	sockaddr_in m_ConnectionAddress;
 #endif
-	SOCKADDR_IN m_ConnectionAddress;
-	//ADDRINFO * m_pAddrInfo;
+
 };
 
 
@@ -85,13 +91,18 @@ protected:
 
 #ifdef OS_WINDOWS
 	WSADATA m_pWsaData;
+	SOCKET m_sConnectionSocket;
+	std::vector<SOCKET> m_vSockets;
+	SOCKADDR_IN m_ServerAddress;
+#else
+	int m_sConnectionSocket;
+	std::vector<int> m_vSockets;
+	sockaddr_in m_ServerAddress;
+
 #endif
 
 	ADDRINFO* m_pAddrInfo;
-	SOCKET m_sConnectionSocket;
-	SOCKADDR_IN m_ServerAddress;
 
-	std::vector<SOCKET> m_vSockets;
 	std::vector<ConnectedDevice> m_vConnectedDevices;
 
 	bool isClose;
