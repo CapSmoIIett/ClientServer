@@ -345,7 +345,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 	Sleep(1000);
 
-	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
+	send(device.m_Socket, (char*)EOF, sizeof(EOF), 0);
 
 	return true;
 }
