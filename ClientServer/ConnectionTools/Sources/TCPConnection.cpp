@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#define EOF "EOFEOF"
+#define EOF "EOFEOFEOFEOFEOFEOFEOFEOFEOFEOFEOFEOF"
 
 
 TCPClient::TCPClient() :
@@ -96,8 +96,6 @@ bool TCPClient::Send(std::string msg)
 {
 	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), NULL) == SOCKET_ERROR)
 		return ShutdownProcess();
-
-	std::cout << "sended\n";
 
 }
 
@@ -301,8 +299,6 @@ bool TCPServer::Send(ConnectedDevice& device, std::string msg)
 {
 	if (send(device.m_Socket, msg.c_str(), msg.size(), NULL) == SOCKET_ERROR)
 		return ShutdownProcess();
-
-	std::cout << "sended\n";
 
 }
 

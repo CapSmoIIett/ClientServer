@@ -70,6 +70,8 @@ int main()
 		{
 			auto sizeOfCommand = sizeof("send");
 			client.Send(msg.substr(sizeOfCommand, msg.size() - sizeOfCommand));
+
+			std::cout << "sended\n";
 		}
 		else if (commands[0] =="download")
 		{

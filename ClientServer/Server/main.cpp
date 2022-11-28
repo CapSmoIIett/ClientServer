@@ -136,6 +136,7 @@ int main()
 			else if (isEcho)
 			{
 				server.Send(server.GetConnectedDevices()[0], msg);
+				std::cout << "sended\n";
 			}
 
 		} while (!cmd.empty() && cmd[0] != "q");
