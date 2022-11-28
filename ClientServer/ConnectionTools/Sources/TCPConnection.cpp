@@ -132,7 +132,7 @@ bool TCPClient::SendFile(std::fstream& file)
 		file.read(buffer, sizeof(buffer));
 	}
 
-	Sleep(100);
+	Sleep(1000);
 
 	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
 
@@ -338,7 +338,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		std::cout << KB * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
-	Sleep(100);
+	Sleep(1000);
 
 	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
 
