@@ -22,6 +22,7 @@
 	#include <unistd.h>
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include <arpa/inet.h>
 #endif
 
 #ifdef OS_POSIX
@@ -81,7 +82,7 @@ public:
 	TCPServer();
 	virtual bool Start() override;
 	bool Connect();
-	ConnectedDevice& Access();
+	ConnectedDevice Access();
 	virtual	bool ShutdownProcess() override;
 
 	virtual std::string Get(ConnectedDevice&);// override;

@@ -135,6 +135,8 @@ bool TCPClient::Send(std::string msg)
 	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) < 0)
 		return ShutdownProcess();
 #endif 
+
+	return true;
 }
 
 bool TCPClient::Disconnect()
