@@ -117,7 +117,6 @@ bool TCPClient::SendFile(std::fstream& file)
 	char buffer[KB]; //выделяем блок 1 Кб
 	int sended = 0;
 	int readed = 0;
-	int len = 0;
 
 	if (!file.is_open())
 		return false;
@@ -131,9 +130,9 @@ bool TCPClient::SendFile(std::fstream& file)
 			std::cout << "ERROR" << "\n";
 
 		file.read(buffer, sizeof(buffer));
-
-		Get();
 	}
+
+	Sleep(1000);
 
 	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
 
@@ -143,7 +142,6 @@ bool TCPClient::SendFile(std::fstream& file)
 bool TCPClient::GetFile(std::fstream& file)
 {
 	char buffer[KB]; //выделяем блок 1 Кб
-	int sended = 0;
 	int len = 0;
 
 	if (!file.is_open())
@@ -157,9 +155,6 @@ bool TCPClient::GetFile(std::fstream& file)
 			break;
 
 		file.write(buffer, len);
-
-		Send(std::to_string(len));
-
 	} while (len != 0);
 
 	return true;
@@ -316,7 +311,6 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	char buffer[KB]; //выделяем блок 1 Кб
 	int readed = 0;
 	int counter = 0;
-	int len = 0;
 
 	if (!file.is_open())
 		return false;
@@ -342,9 +336,9 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		auto nanosec = clock.time_since_epoch();
 		//std::cout << buffer << "\n";
 		std::cout << KB * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
-
-		Get(device);
 	}
+
+	Sleep(1000);
 
 	send(m_sConnectionSocket, (char*)EOF, sizeof(EOF), 0);
 
@@ -355,7 +349,6 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 {
 	char buffer[KB]; //выделяем блок 1 Кб
 	int len = 0;
-	int sended = 0;
 	int counter = 0;
 
 	if (!file.is_open())
@@ -385,9 +378,6 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		counter++;
 		auto nanosec = clock.time_since_epoch();
 		std::cout << KB * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
-
-		Send(device, std::to_string(len));
-
 	} while (len > 0);
 
 	return true;
