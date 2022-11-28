@@ -3,7 +3,7 @@
 #include <iostream>
 
 #define EOF "EOF"
-#define MSG_SIZE MB
+#define MSG_SIZE KB
 
 
 TCPClient::TCPClient() :
