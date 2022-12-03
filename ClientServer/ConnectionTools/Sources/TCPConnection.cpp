@@ -220,6 +220,9 @@ bool TCPClient::GetFile(std::fstream& file)
 		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
 #endif
 
+		if (len < 0)
+			return false;
+
 		if (strcmp(buffer, MEOF) == 0)
 			break;
 
@@ -443,7 +446,17 @@ std::string TCPServer::Get(ConnectedDevice& device)
 		memset(recvBuffer, 0, sizeof(recvBuffer));
 #endif
 
-		amountBytes = recvfrom(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0, 0, 0);
+#if defined(OS_WINDOWS)
+		u_long t = true; 
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
+		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
+
+		t = false;
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+#else
+		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT);
+#endif
 		
 #if defined(OS_WINDOWS)
 		if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT)
@@ -535,7 +548,20 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	{
 		auto clock = std::chrono::high_resolution_clock::now();
 
+#if defined(OS_WINDOWS)
+		u_long t = true; 
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+
+		t = false;
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+#else
+		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
+#endif
+
+		if (len < 0)
+			return false;
 
 		if (strcmp(buffer, MEOF) == 0)
 			break;
