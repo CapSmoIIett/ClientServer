@@ -401,12 +401,12 @@ std::string TCPServer::Get(ConnectedDevice& device)
 
 #if defined(OS_WINDOWS)
 		u_long t = true; 
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
 		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
 
 		t = false;
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 #else
 		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT);
 #endif
@@ -500,12 +500,12 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	{
 #if defined(OS_WINDOWS)
 		u_long t = true; 
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
 
 		t = false;
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 #else
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
 #endif
