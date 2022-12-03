@@ -106,12 +106,12 @@ std::string TCPClient::Get()
 		WIN
 		(
 			u_long t = true;
-			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
 			amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
 
 			t = false;
-			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 		);
 		NIX(amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT));
 
@@ -198,12 +198,12 @@ bool TCPClient::GetFile(std::fstream& file)
 		WIN
 		(
 			u_long t = true;
-			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
 			len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
 
 			t = false;
-			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 		);
 		NIX
 		(
