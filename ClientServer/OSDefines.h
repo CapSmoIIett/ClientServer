@@ -8,6 +8,17 @@
 	#error unsupported platform
 #endif
 
+
+#ifdef OS_WINDOWS	 
+#define WIN(exp) exp
+#define NIX(exp)
+
+#else
+#define WIN(exp)
+#define NIX(exp) exp
+#endif
+
+
 #define KB 1024
 #define MB 1048576
 

@@ -13,7 +13,6 @@ TCPClient::TCPClient() :
 #if defined(OS_WINDOWS)
 	m_pWsaData(),
 #endif
-//	m_pAddrInfo(nullptr),
 	m_sConnectionSocket(INVALID_SOCKET)
 {
 
@@ -21,18 +20,17 @@ TCPClient::TCPClient() :
 
 bool TCPClient::Start()
 {
-#if defined(OS_WINDOWS)
-	m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-#else
-	m_ConnectionAddress.sin_addr.s_addr = INADDR_ANY;
-#endif
+	WIN(m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr("127.0.0.1"));
+	NIX(m_ConnectionAddress.sin_addr.s_addr = INADDR_ANY);
+
 	m_ConnectionAddress.sin_family = AF_INET;
 	m_ConnectionAddress.sin_port = htons(2000);
 
-#if defined(OS_WINDOWS)
-	if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
-		return false;
-#endif
+	WIN
+	(
+		if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
+			return false;
+	);
 
 	return true;
 }
@@ -44,27 +42,22 @@ bool TCPClient::Connect(const char* ip)
 	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_sConnectionSocket == INVALID_SOCKET)
 	{
-#if defined(OS_WINDOWS)
-		printf("Error: Invalid Socket (%d)\n", WSAGetLastError());
-#endif
+		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
 		return false;
 	}
 
 	if (ip != nullptr)
-#if defined(OS_WINDOWS)
-		m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip);
-#else
-		inet_aton(ip, &m_ConnectionAddress.sin_addr);
-#endif
+	{
+		WIN(m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip));
+		NIX(inet_aton(ip, &m_ConnectionAddress.sin_addr));
+	}
 
 	result = connect(m_sConnectionSocket, 
 		(struct sockaddr*)&m_ConnectionAddress, 
 		sizeof(m_ConnectionAddress));
 	if (result != 0)
 	{
-#if defined(OS_WINDOWS)
-		printf("Error: Invalid Connection (%d)\n", WSAGetLastError());
-#endif
+		WIN(printf("Error: Invalid Connection (%d)\n", WSAGetLastError()));
 		return false;
 	}	
 
@@ -83,20 +76,15 @@ bool TCPClient::ShutdownProcess()
 		m_pAddrInfo = nullptr;
 	}*/
 
-#if defined(OS_WINDOWS)
-	WSACleanup();
-#endif
+	WIN(WSACleanup());
 
 	if (m_sConnectionSocket != INVALID_SOCKET)
 	{
 		shutdown(m_sConnectionSocket, SD_BOTH);
 
+		WIN(closesocket(m_sConnectionSocket));
+		NIX(close(m_sConnectionSocket));
 
-#if defined(OS_WINDOWS)
-		closesocket(m_sConnectionSocket);
-#else
-		close(m_sConnectionSocket);
-#endif
 		m_sConnectionSocket = INVALID_SOCKET;
 	}
 
@@ -112,23 +100,20 @@ std::string TCPClient::Get()
 
 	do
 	{
-#if defined(OS_WINDOWS)
-		ZeroMemory(recvBuffer, sizeof(recvBuffer));
-#else
-		memset(recvBuffer, 0, sizeof(recvBuffer));
-#endif
+		WIN(ZeroMemory(recvBuffer, sizeof(recvBuffer)));
+		NIX(memset(recvBuffer, 0, sizeof(recvBuffer)));
 
-#if defined(OS_WINDOWS)
-		u_long t = true; 
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		WIN
+		(
+			u_long t = true;
+			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
-		amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
+			amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
 
-		t = false;
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-#else
-		amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT);
-#endif
+			t = false;
+			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		);
+		NIX(amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT));
 
 		result += std::string(recvBuffer);
 	} while (amountBytes > sizeof(recvBuffer));
@@ -139,13 +124,16 @@ std::string TCPClient::Get()
 bool TCPClient::Send(std::string msg)
 {
 
-#if defined(OS_WINDOWS)
-	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
-		return ShutdownProcess();
-#else 
-	if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) < 0)
-		return ShutdownProcess();
-#endif 
+	WIN
+	(
+		if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
+			return ShutdownProcess();
+	);
+	NIX
+	(
+		if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) < 0)
+			return ShutdownProcess();
+	);
 
 	return true;
 }
@@ -153,17 +141,23 @@ bool TCPClient::Send(std::string msg)
 bool TCPClient::Disconnect()
 {
 	auto iResult = shutdown(m_sConnectionSocket, SD_SEND);
-#if defined(OS_WINDOWS)
-	if (iResult == SOCKET_ERROR) {
-		printf("shutdown failed: %d\n", WSAGetLastError());
-		WSACleanup();
-		closesocket(m_sConnectionSocket);
-#else
-	if (iResult < 0) {
-		close(m_sConnectionSocket);
-#endif
+	WIN
+	(
+		if (iResult == SOCKET_ERROR)
+		{
+			printf("shutdown failed: %d\n", WSAGetLastError());
+			WSACleanup();
+			closesocket(m_sConnectionSocket);
+			);
+	NIX
+	(
+		if (iResult < 0) 
+		{
+			close(m_sConnectionSocket);
+			);
 		return 1;
 	}
+
 	return false;
 }
 
@@ -187,11 +181,8 @@ bool TCPClient::SendFile(std::fstream& file)
 		file.read(buffer, sizeof(buffer));
 	}
 
-#if defined(OS_WINDOWS)
-	Sleep(1000);
-#else
-	sleep(1000);
-#endif
+	WIN(Sleep(1000));
+	NIX(sleep(1000));
 
 	send(m_sConnectionSocket, (char*)MEOF, sizeof(MEOF), 0);
 
@@ -208,23 +199,23 @@ bool TCPClient::GetFile(std::fstream& file)
 
 	do
 	{
-#if defined(OS_WINDOWS)
-		u_long t = true; 
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		WIN(
+			u_long t = true;
+			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
-		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
+			len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
 
-		t = false;
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-#else
-		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
-#endif
+			t = false;
+			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		);
+		NIX
+		(
+			len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT)
+		);
 
 	if (len < 0)
 	{
-#if defined(OS_WINDOWS)
-		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
-#endif
+		WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
 		return false;
 	}
 
@@ -245,30 +236,26 @@ TCPServer::TCPServer() :
 #if defined(OS_WINDOWS)
 	m_pWsaData(),
 #endif
-	//m_pAddrInfo(nullptr),
 	m_sConnectionSocket(INVALID_SOCKET)
 {
 	isClose = false;
-
 }
 
 bool TCPServer::Start()
 {
-#if defined(OS_WINDOWS)
-	m_ServerAddress.sin_addr.S_un.S_addr = INADDR_ANY;
-#else
-	m_ServerAddress.sin_addr.s_addr = INADDR_ANY;
-#endif
+	WIN(m_ServerAddress.sin_addr.S_un.S_addr = INADDR_ANY);
+	NIX(m_ServerAddress.sin_addr.s_addr = INADDR_ANY);
+
 	m_ServerAddress.sin_family = AF_INET;
 	m_ServerAddress.sin_port = htons(2000);
 
-#if defined(OS_WINDOWS)
-	if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
-		return false;
-#endif
+	WIN
+	(
+		if (WSAStartup(MAKEWORD(2, 2), &m_pWsaData) != 0)
+			return false
+	);
 
 	return true;
-
 }
 
 bool TCPServer::Connect()
@@ -278,9 +265,7 @@ bool TCPServer::Connect()
 	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_sConnectionSocket == INVALID_SOCKET)
 	{
-#if defined(OS_WINDOWS)
-		printf("Error: Invalid Socket (%d)\n", WSAGetLastError());
-#endif
+		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
 		return false;
 	}
 
@@ -300,26 +285,16 @@ bool TCPServer::Connect()
 	}*/
 
 	result = bind(m_sConnectionSocket, (struct sockaddr*)&m_ServerAddress, sizeof(m_ServerAddress));
-#if defined(OS_WINDOWS)
-	if (result == SOCKET_ERROR)
+	if (WIN(result == SOCKET_ERROR)NIX(result < 0))
 	{
-		printf("Error: Invalid Bind (%d)\n", WSAGetLastError());
-#else
-	if (result < 0)
-	{
-#endif
+		WIN(printf("Error: Invalid Bind (%d)\n", WSAGetLastError()));
 		return false;
 	}
 
 	result = listen(m_sConnectionSocket, 5);
-#if defined(OS_WINDOWS)
-	if (result == SOCKET_ERROR)
+	if (WIN(result == SOCKET_ERROR)NIX(result < 0))
 	{
-		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
-#else
-	if (result < 0)
-	{
-#endif
+		WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
 		return false;
 	}
 
@@ -328,20 +303,13 @@ bool TCPServer::Connect()
 
 ConnectedDevice& TCPServer::Access()
 {
-#if defined(OS_WINDOWS)
-	SOCKADDR_IN cs_addr;
-#else 
-	sockaddr_in cs_addr;
-#endif
+	WIN(SOCKADDR_IN cs_addr);
+	NIX(sockaddr_in cs_addr);
 
 	socklen_t cs_addrsize = sizeof(cs_addr);
 
-#if defined(OS_WINDOWS)
-	SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize);
-#else
-	int ClientSocket = accept(m_sConnectionSocket, (sockaddr*) &cs_addr, &cs_addrsize);
-#endif
-
+	WIN(SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize));
+	NIX(int ClientSocket = accept(m_sConnectionSocket, (sockaddr*) &cs_addr, &cs_addrsize));
 
 	if (ClientSocket == INVALID_SOCKET)
 		return ConnectedDevice(ClientSocket, cs_addr, ConnectedDevice::Status::Disabled);
@@ -368,10 +336,10 @@ ConnectedDevice& TCPServer::Access()
 	int intvl = 3;
 	int cnt = 5;
 
-	setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag);
-	setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(ka_conf.ka_idle);
-	setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(ka_conf.ka_intvl);
-	setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(ka_conf.ka_cnt);
+	setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag));
+	setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(ka_conf.ka_idle));
+	setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(ka_conf.ka_intvl));
+	setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(ka_conf.ka_cnt));
 #endif
 
 
@@ -406,18 +374,15 @@ bool TCPServer::ShutdownProcess()
 		m_pAddrInfo = nullptr;
 	}*/
 
-#if defined(OS_WINDOWS)
-	WSACleanup();
-#endif
+	WIN(WSACleanup());
 
 	if (m_sConnectionSocket != INVALID_SOCKET)
 	{
 		shutdown(m_sConnectionSocket, SD_BOTH);
-#if defined(OS_WINDOWS)
-		closesocket(m_sConnectionSocket);
-#else
-		close(m_sConnectionSocket);
-#endif
+
+		WIN(closesocket(m_sConnectionSocket));
+		NIX(close(m_sConnectionSocket));
+
 		m_sConnectionSocket = INVALID_SOCKET;
 	}
 
@@ -426,11 +391,10 @@ bool TCPServer::ShutdownProcess()
 	for (auto socket : m_vSockets)
 	{
 		shutdown(socket, SD_BOTH);
-#if defined(OS_WINDOWS)
-		closesocket(socket);
-#else
-		close(socket);
-#endif
+
+		WIN(closesocket(socket));
+		NIX(close(socket));
+
 		socket = INVALID_SOCKET;
 	}
 
@@ -445,11 +409,8 @@ std::string TCPServer::Get(ConnectedDevice& device)
 
 	do
 	{
-#if defined(OS_WINDOWS)
-		ZeroMemory(recvBuffer, sizeof(recvBuffer));
-#else
-		memset(recvBuffer, 0, sizeof(recvBuffer));
-#endif
+		WIN(ZeroMemory(recvBuffer, sizeof(recvBuffer)));
+		NIX(memset(recvBuffer, 0, sizeof(recvBuffer)));
 
 #if defined(OS_WINDOWS)
 		u_long t = true; 
@@ -463,11 +424,8 @@ std::string TCPServer::Get(ConnectedDevice& device)
 		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT);
 #endif
 		
-#if defined(OS_WINDOWS)
-		if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT)
-#else
-		if (amountBytes < 0)
-#endif
+		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
+		NIX(if (amountBytes < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
 			return "";
@@ -481,13 +439,16 @@ std::string TCPServer::Get(ConnectedDevice& device)
 
 bool TCPServer::Send(ConnectedDevice& device, std::string msg)
 {
-#if defined(OS_WINDOWS)
-	if (send(device.m_Socket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
-		return ShutdownProcess();
-#else 
-	if (send(device.m_Socket, msg.c_str(), msg.size(), 0) < 0)
-		return ShutdownProcess();
-#endif 
+	WIN
+	(
+		if (send(device.m_Socket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
+			return ShutdownProcess()
+	);
+	NIX
+	(
+		if (send(device.m_Socket, msg.c_str(), msg.size(), 0) < 0)
+			return ShutdownProcess()
+	);
 
 	return false;
 }
@@ -512,11 +473,8 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		sended = send(device.m_Socket, (char*)buffer, readed, 0);
 		file.read(buffer, sizeof(buffer));
 
-#if defined(OS_WINDOWS)
-		if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT)
-#else
-		if (sended < 0)
-#endif
+		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
+		NIX(if (sended < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * MSG_SIZE, "");
@@ -529,11 +487,8 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		std::cout << MSG_SIZE / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
-#if defined(OS_WINDOWS)
-	Sleep(1000);
-#else
-	sleep(1000);
-#endif
+	WIN(Sleep(1000));
+	NIX(sleep(1000));
 
 	send(device.m_Socket, (char*)MEOF, sizeof(MEOF), 0);
 
@@ -567,9 +522,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	if (len < 0)
 	{
-#if defined(OS_WINDOWS)
-		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
-#endif
+		WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
 		return false;
 	}
 
@@ -578,11 +531,8 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		file.write(buffer, len);
 
-#if defined(OS_WINDOWS)
-		if (WSAGetLastError() == WSAECONNRESET)
-#else
-		if (len < 0)
-#endif
+		WIN(if (WSAGetLastError() == WSAECONNRESET))
+		NIX(if (len < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
