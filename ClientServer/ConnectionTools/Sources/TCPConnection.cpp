@@ -141,20 +141,16 @@ bool TCPClient::Send(std::string msg)
 bool TCPClient::Disconnect()
 {
 	auto iResult = shutdown(m_sConnectionSocket, SD_SEND);
-	WIN
-	(
-		if (iResult == SOCKET_ERROR)
-		{
+	if (WIN(iResult == SOCKET_ERROR)NIX(iResult < 0))
+	{
+		WIN
+		(
 			printf("shutdown failed: %d\n", WSAGetLastError());
 			WSACleanup();
 			closesocket(m_sConnectionSocket);
-			);
-	NIX
-	(
-		if (iResult < 0) 
-		{
-			close(m_sConnectionSocket);
-			);
+		);
+
+		NIX(close(m_sConnectionSocket));
 		return 1;
 	}
 
@@ -268,21 +264,6 @@ bool TCPServer::Connect()
 		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
 		return false;
 	}
-
-	//struct timeval tv;
-	//tv.tv_sec = 30;
-
-	//setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_RCVTIMEO, (struct timeval*)&tv, sizeof(struct timeval));
-	//setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_SNDTIMEO, (struct timeval*)&tv, sizeof(struct timeval));
-
-	BOOL iVal = true;
-	
-	//result = setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&iVal, sizeof(iVal));
-	/*result = setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_SNDTIMEO, (char*)&iVal, sizeof(iVal));
-	if (result == SOCKET_ERROR)
-	{
-		printf("setsockopt() failed with error code %d\n", WSAGetLastError());
-	}*/
 
 	result = bind(m_sConnectionSocket, (struct sockaddr*)&m_ServerAddress, sizeof(m_ServerAddress));
 	if (WIN(result == SOCKET_ERROR)NIX(result < 0))
