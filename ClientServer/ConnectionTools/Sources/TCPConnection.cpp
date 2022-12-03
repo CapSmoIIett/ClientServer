@@ -195,7 +195,8 @@ bool TCPClient::GetFile(std::fstream& file)
 
 	do
 	{
-		WIN(
+		WIN
+		(
 			u_long t = true;
 			ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
 
@@ -209,11 +210,16 @@ bool TCPClient::GetFile(std::fstream& file)
 			len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT)
 		);
 
-	if (len < 0)
-	{
-		WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
-		return false;
-	}
+		if (len < 0)
+		{
+			int err = 0;
+			WIN(int)NIX(SockLen_t) len = sizeof(err);
+			WIN(err = WSAGetLastError());
+			getsockopt(m_sConnectionSocket, SOL_SOCKET, SO_ERROR, (char*) &err, &len);
+
+			WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
+			return false;
+		}
 
 		if (strcmp(buffer, MEOF) == 0)
 			break;
