@@ -11,10 +11,30 @@
 #include <fstream>
 #include <chrono>
 
+#include <functional>
+#include <list>
+
+#include <thread>
+#include <mutex>
+#include <shared_mutex>
+#include <cstdint>
+#include <cstring>
+#include <cinttypes>
+#include <malloc.h>
+
+#include <queue>
+#include <vector>
+#include <functional>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+
 #if defined(OS_WINDOWS)
 	//#include <Windows.h>
 	#include <WinSock2.h> 
 	#include <WS2tcpip.h>
+	#include <mstcpip.h>
 #else
 	#include <sys/socket.h>
 	#include <netinet/in.h>
@@ -82,7 +102,7 @@ public:
 	TCPServer();
 	virtual bool Start() override;
 	bool Connect();
-	ConnectedDevice Access();
+	ConnectedDevice& Access();
 	virtual	bool ShutdownProcess() override;
 
 	virtual std::string Get(ConnectedDevice&);// override;

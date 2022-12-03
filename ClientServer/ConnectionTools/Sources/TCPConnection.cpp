@@ -68,6 +68,7 @@ bool TCPClient::Connect(const char* ip)
 		return false;
 	}	
 
+
 	std::cout << "connected";
 
 	return true;
@@ -117,7 +118,17 @@ std::string TCPClient::Get()
 		memset(recvBuffer, 0, sizeof(recvBuffer));
 #endif
 
+#if defined(OS_WINDOWS)
+		u_long t = true; 
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
 		amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
+
+		t = false;
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+#else
+		amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT);
+#endif
 
 		result += std::string(recvBuffer);
 	} while (amountBytes > sizeof(recvBuffer));
@@ -197,7 +208,17 @@ bool TCPClient::GetFile(std::fstream& file)
 
 	do
 	{
+#if defined(OS_WINDOWS)
+		u_long t = true; 
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
 		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
+
+		t = false;
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+#else
+		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
+#endif
 
 		if (strcmp(buffer, MEOF) == 0)
 			break;
@@ -255,6 +276,21 @@ bool TCPServer::Connect()
 		return false;
 	}
 
+	//struct timeval tv;
+	//tv.tv_sec = 30;
+
+	//setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_RCVTIMEO, (struct timeval*)&tv, sizeof(struct timeval));
+	//setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_SNDTIMEO, (struct timeval*)&tv, sizeof(struct timeval));
+
+	BOOL iVal = true;
+	
+	//result = setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&iVal, sizeof(iVal));
+	/*result = setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_SNDTIMEO, (char*)&iVal, sizeof(iVal));
+	if (result == SOCKET_ERROR)
+	{
+		printf("setsockopt() failed with error code %d\n", WSAGetLastError());
+	}*/
+
 	result = bind(m_sConnectionSocket, (struct sockaddr*)&m_ServerAddress, sizeof(m_ServerAddress));
 #if defined(OS_WINDOWS)
 	if (result == SOCKET_ERROR)
@@ -282,7 +318,7 @@ bool TCPServer::Connect()
 	return true;
 }
 
-ConnectedDevice TCPServer::Access()
+ConnectedDevice& TCPServer::Access()
 {
 #if defined(OS_WINDOWS)
 	SOCKADDR_IN cs_addr;
@@ -298,8 +334,38 @@ ConnectedDevice TCPServer::Access()
 	int ClientSocket = accept(m_sConnectionSocket, (sockaddr*) &cs_addr, &cs_addrsize);
 #endif
 
+
 	if (ClientSocket == INVALID_SOCKET)
 		return ConnectedDevice(ClientSocket, cs_addr, ConnectedDevice::Status::Disabled);
+
+	int flag = 1;
+#ifdef OS_WINDOWS
+	tcp_keepalive ka { 1, 10 * 1000, 3 * 1000 };
+
+	setsockopt(ClientSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag));
+	//if (setsockopt(ClientSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag)) != 0) 
+	//	return false;
+
+	unsigned long numBytesReturned = 0;
+
+	WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr);
+	//if (WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr) != 0) 
+	//	return false;
+#else //POSIX
+	//if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)) == -1) return false;
+	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &ka_conf.ka_idle, sizeof(ka_conf.ka_idle)) == -1) return false;
+	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &ka_conf.ka_intvl, sizeof(ka_conf.ka_intvl)) == -1) return false;
+	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &ka_conf.ka_cnt, sizeof(ka_conf.ka_cnt)) == -1) return false;
+	int idle = 10;
+	int intvl = 3;
+	int cnt = 5;
+
+	setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag);
+	setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(ka_conf.ka_idle);
+	setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(ka_conf.ka_intvl);
+	setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(ka_conf.ka_cnt);
+#endif
+
 
 	ConnectedDevice device(ClientSocket, cs_addr, ConnectedDevice::Status::Connected);
 
@@ -377,10 +443,10 @@ std::string TCPServer::Get(ConnectedDevice& device)
 		memset(recvBuffer, 0, sizeof(recvBuffer));
 #endif
 
-		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
-
+		amountBytes = recvfrom(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0, 0, 0);
+		
 #if defined(OS_WINDOWS)
-		if (WSAGetLastError() == WSAECONNRESET)
+		if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT)
 #else
 		if (amountBytes < 0)
 #endif
@@ -442,7 +508,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		counter++;
 		auto nanosec = clock.time_since_epoch();
 		//std::cout << buffer << "\n";
-		std::cout << MSG_SIZE * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+		std::cout << MSG_SIZE / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
 
 #if defined(OS_WINDOWS)
