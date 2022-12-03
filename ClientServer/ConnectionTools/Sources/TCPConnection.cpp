@@ -220,8 +220,13 @@ bool TCPClient::GetFile(std::fstream& file)
 		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
 #endif
 
-		if (len < 0)
-			return false;
+	if (len < 0)
+	{
+#if defined(OS_WINDOWS)
+		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
+#endif
+		return false;
+	}
 
 		if (strcmp(buffer, MEOF) == 0)
 			break;
@@ -508,7 +513,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		file.read(buffer, sizeof(buffer));
 
 #if defined(OS_WINDOWS)
-		if (WSAGetLastError() == WSAECONNRESET)
+		if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT)
 #else
 		if (sended < 0)
 #endif
@@ -560,8 +565,13 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
 #endif
 
-		if (len < 0)
-			return false;
+	if (len < 0)
+	{
+#if defined(OS_WINDOWS)
+		printf("Error: Invalid Listen (%d)\n", WSAGetLastError());
+#endif
+		return false;
+	}
 
 		if (strcmp(buffer, MEOF) == 0)
 			break;
