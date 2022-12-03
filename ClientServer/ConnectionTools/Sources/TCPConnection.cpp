@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #define MEOF "EOF"
-#define MSG_SIZE KB
+#define MSG_SIZE KB *  16
 
 
 TCPClient::TCPClient() :
@@ -452,27 +452,30 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 	std::cout << "\n\n";
 
+	auto clock = std::chrono::high_resolution_clock::now();
+
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
 	{
-		auto clock = std::chrono::high_resolution_clock::now();
 
 		sended = send(device.m_Socket, (char*)buffer, readed, 0);
 		file.read(buffer, sizeof(buffer));
 
 		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
-		NIX(if (sended < 0))
+			NIX(if (sended < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
+			counter-= 1000;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * MSG_SIZE, "");
 			return false;
 		}
 
+
 		counter++;
-		auto nanosec = clock.time_since_epoch();
-		//std::cout << buffer << "\n";
-		std::cout << MSG_SIZE / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	}
+
+	auto nanosec = clock.time_since_epoch();
+	std::cout << MSG_SIZE * counter / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 
 	WIN(Sleep(1000));
 	NIX(sleep(1000));
@@ -491,10 +494,10 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	if (!file.is_open())
 		return false;
 
+	auto clock = std::chrono::high_resolution_clock::now();
+
 	do
 	{
-		auto clock = std::chrono::high_resolution_clock::now();
-
 #if defined(OS_WINDOWS)
 		u_long t = true; 
 		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
@@ -522,17 +525,16 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		NIX(if (len < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
+			counter-= 1000;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
 			return false;
 		}
 
-		if (len < sizeof(buffer))
-			std::cout << "ERROR" << "\n";
-
 		counter++;
-		auto nanosec = clock.time_since_epoch();
-		std::cout << MSG_SIZE * 8 / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 	} while (len > 0);
+
+	auto nanosec = clock.time_since_epoch();
+	std::cout << MSG_SIZE * counter / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
 
 	return true;
 }

@@ -117,7 +117,9 @@ int main()
 		else if (commands[0] == "redownload")
 		{
 			std::fstream file;
-			file.open(commands[1], std::fstream::out | std::fstream::app | std::fstream::binary);
+			file.open(commands[1], std::fstream::out | std::fstream::binary);
+
+			file.seekp(atoi(commands[2].c_str()), std::ios::beg);
 
 			client.GetFile(file);
 
