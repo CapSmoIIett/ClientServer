@@ -43,7 +43,9 @@ int main()
 				if (cmd[0] == "reupload")
 				{
 					std::fstream file;
-					file.open(cmd[1], std::fstream::out | std::fstream::app | std::fstream::binary);
+					file.open(cmd[1], std::fstream::out | std::fstream::in | std::fstream::binary);
+
+					file.seekp(atoi(cmd[2].c_str()), std::ios::beg);
 
 					server.GetFile(server.GetConnectedDevices()[0], file);
 
@@ -61,7 +63,7 @@ int main()
 					std::fstream file;
 					file.open(cmd[1], std::fstream::in | std::fstream::binary);
 
-					file.seekp(atoi(cmd[2].c_str()), std::ios::beg);
+					file.seekg(atoi(cmd[2].c_str()), std::ios::beg);
 
 					server.SendFile(server.GetConnectedDevices()[0], file);
 
@@ -115,6 +117,7 @@ int main()
 					if ((server.GetConnectedDevices()[0]).m_Status == ConnectedDevice::Status::Disabled)
 					{
 						server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = cmd[1];
+						std::cout << "error" << "\n";
 						break;
 					}
 
@@ -130,6 +133,7 @@ int main()
 					if ((server.GetConnectedDevices()[0]).m_Status == ConnectedDevice::Status::Disabled)
 					{
 						server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = cmd[1];
+						std::cout << "error" << "\n";
 						break;
 					}
 

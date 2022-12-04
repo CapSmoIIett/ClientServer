@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #define MEOF "EOF"
-#define MSG_SIZE KB *  16
+#define MSG_SIZE KB * 16
 
 
 TCPClient::TCPClient() :
@@ -465,7 +465,7 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 			NIX(if (sended < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
-			counter-= 1000;
+			counter-= 100;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * MSG_SIZE, "");
 			return false;
 		}
@@ -525,7 +525,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		NIX(if (len < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
-			counter-= 1000;
+			counter-= 100;
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
 			return false;
 		}
