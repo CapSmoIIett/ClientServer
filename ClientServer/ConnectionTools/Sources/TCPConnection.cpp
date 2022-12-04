@@ -61,6 +61,34 @@ bool TCPClient::Connect(const char* ip)
 		return false;
 	}	
 
+	int flag = 1;
+#ifdef OS_WINDOWS
+	tcp_keepalive ka { 1, 10 * 1000, 3 * 1000 };
+
+	setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag));
+	//if (setsockopt(ClientSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag)) != 0) 
+	//	return false;
+
+	unsigned long numBytesReturned = 0;
+
+	WSAIoctl(m_sConnectionSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr);
+	//if (WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr) != 0) 
+	//	return false;
+#else //POSIX
+	//if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)) == -1) return false;
+	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &ka_conf.ka_idle, sizeof(ka_conf.ka_idle)) == -1) return false;
+	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &ka_conf.ka_intvl, sizeof(ka_conf.ka_intvl)) == -1) return false;
+	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &ka_conf.ka_cnt, sizeof(ka_conf.ka_cnt)) == -1) return false;
+	int idle = 10;
+	int intvl = 3;
+	int cnt = 5;
+
+	setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag));
+	setsockopt(m_sConnectionSocket, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(ka_conf.ka_idle));
+	setsockopt(m_sConnectionSocket, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(ka_conf.ka_intvl));
+	setsockopt(m_sConnectionSocket, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(ka_conf.ka_cnt));
+#endif
+
 
 	std::cout << "connected";
 
@@ -521,18 +549,7 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
 #endif
 
-	if (len < 0)
-	{
-		WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
-		return false;
-	}
-
-		if (strcmp(buffer, MEOF) == 0)
-			break;
-
-		file.write(buffer, len);
-
-		WIN(if (WSAGetLastError() == WSAECONNRESET))
+		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
 		NIX(if (len < 0))
 		{
 			device.m_Status = ConnectedDevice::Status::Disabled;
@@ -540,6 +557,11 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
 			return false;
 		}
+
+		if (strcmp(buffer, MEOF) == 0)
+			break;
+
+		file.write(buffer, len);
 
 		counter++;
 	} while (len > 0);
