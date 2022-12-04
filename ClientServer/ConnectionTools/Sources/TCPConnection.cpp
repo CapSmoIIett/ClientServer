@@ -171,8 +171,16 @@ bool TCPClient::SendFile(std::fstream& file)
 	{
 		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
 	
-		if (sended != readed)
-			std::cout << "ERROR" << "\n";
+		if (sended < 0)
+		{
+			int err = 0;
+			WIN(int)NIX(SockLen_t) len = sizeof(err);
+			WIN(err = WSAGetLastError());
+			getsockopt(m_sConnectionSocket, SOL_SOCKET, SO_ERROR, (char*) &err, &len);
+
+			WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
+			return false;
+		}
 
 		file.read(buffer, sizeof(buffer));
 	}
@@ -394,6 +402,7 @@ std::string TCPServer::Get(ConnectedDevice& device)
 	char recvBuffer[512];
 	std::string result;
 
+
 	do
 	{
 		WIN(ZeroMemory(recvBuffer, sizeof(recvBuffer)));
@@ -493,6 +502,8 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	if (!file.is_open())
 		return false;
+
+	std::cout << "\n\n";
 
 	auto clock = std::chrono::high_resolution_clock::now();
 
