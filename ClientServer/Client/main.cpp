@@ -8,12 +8,13 @@
 #include <fstream>
 #include <thread>
 
-
 #include "../ConnectionTools/Headers/TCPConnection.h"
+#include "../ConnectionTools/Headers/UDPConnection.h"
 
 int main()
 {
-	TCPClient client;
+	//TCPClient client;
+	UDPClient client;
 	std::string msg;
 	std::vector<std::string> commands;
 

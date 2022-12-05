@@ -8,10 +8,12 @@
 #include <thread>
 
 #include "../ConnectionTools/Headers/TCPConnection.h"
+#include "../ConnectionTools/Headers/UDPConnection.h"
 
 int main()
 {
-	TCPServer server;
+	//TCPServer server;
+	UDPServer server;
 	std::string msg;
 
 	using Commands = std::vector<std::string>;
