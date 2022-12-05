@@ -178,8 +178,6 @@ bool UDPClient::SendFile(std::fstream& file)
 	if (!file.is_open())
 		return false;
 
-	std::cout << "\n\n";
-
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
 	{
@@ -219,7 +217,7 @@ bool UDPClient::SendFile(std::fstream& file)
 		file.read(buffer, sizeof(buffer));
 	}
 
-	sendto(m_sConnectionSocket, (char*)MEOF, sizeof(MEOF), 0, 
+	sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
 		(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
 
 	return true;
@@ -550,7 +548,7 @@ bool UDPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 {
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
-	char strBytes[sizeof(int)];
+	char strBytes[32];
 	char msg[WM_SIZE];
 	int len = 0;
 	int counter = 0;
