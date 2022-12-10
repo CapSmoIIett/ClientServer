@@ -184,7 +184,7 @@ bool UDPClient::SendFile(std::fstream& file)
 	if (!file.is_open())
 		return false;
 
-	while ((readed = file.gcount()) != 0)
+	do
 	{
 		while (true)
 		{
@@ -231,7 +231,7 @@ bool UDPClient::SendFile(std::fstream& file)
 			isWasError = 0;
 			amount = 1;
 		}
-	}
+	} while ((readed = file.gcount()) != 0);
 
 	sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
 		(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
