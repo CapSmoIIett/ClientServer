@@ -224,6 +224,8 @@ bool UDPClient::SendFile(std::fstream& file)
 			}
 		}
 
+		file.read(buffer, sizeof(buffer));
+
 		if (isWasError)
 		{
 			isWasError = 0;
