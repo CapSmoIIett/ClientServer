@@ -4,6 +4,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <chrono>
 
 #define MEOF "EOF"
 #define MSG_SIZE KB * 16
@@ -489,7 +490,8 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 	std::cout << "\n\n";
 
-	auto clock = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::system_clock::now();
+	//auto clock = std::chrono::high_resolution_clock::now();
 
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
@@ -511,8 +513,9 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		counter++;
 	}
 
-	auto nanosec = clock.time_since_epoch();
-	std::cout << MSG_SIZE * counter / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+	auto end = std::chrono::system_clock::now();
+	std::cout << (static_cast<double>(MSG_SIZE * counter) / MB) / 
+		std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "\n";
 
 	WIN(Sleep(1000));
 	NIX(sleep(1000));
@@ -533,7 +536,8 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	std::cout << "\n\n";
 
-	auto clock = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::system_clock::now();
+	//auto clock = std::chrono::high_resolution_clock::now();
 
 	do
 	{
@@ -566,8 +570,9 @@ bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		counter++;
 	} while (len > 0);
 
-	auto nanosec = clock.time_since_epoch();
-	std::cout << MSG_SIZE * counter / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+	auto end = std::chrono::system_clock::now();
+	std::cout << (static_cast<double>(MSG_SIZE * counter) / MB) / 
+		std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "\n";
 
 	return true;
 }
