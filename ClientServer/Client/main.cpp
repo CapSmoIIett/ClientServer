@@ -13,8 +13,8 @@
 
 int main()
 {
-	TCPClient client;
-	//UDPClient client;
+	//TCPClient client;
+	UDPClient client;
 	std::string msg;
 	std::vector<std::string> commands;
 

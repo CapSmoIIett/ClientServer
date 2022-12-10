@@ -12,8 +12,8 @@
 
 int main()
 {
-	TCPServer server;
-	//UDPServer server;
+	//TCPServer server;
+	UDPServer server;
 	std::string msg;
 
 	using Commands = std::vector<std::string>;

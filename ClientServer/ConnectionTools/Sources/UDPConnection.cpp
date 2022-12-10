@@ -10,9 +10,9 @@
 
 
 // work messages
-#define WM_OK  "11111111"
-#define WM_ERR "00000000"
-#define WM_END "22222222"
+#define WM_OK  "11"
+#define WM_ERR "00"
+#define WM_END "22"
 
 #define WM_SIZE sizeof(WM_OK)
 
@@ -529,7 +529,7 @@ bool UDPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 			}
 		}
 
-		std::cout << "|";
+		//std::cout << "|";
 
 		file.read(buffer, sizeof(buffer));
 
@@ -568,12 +568,14 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 			len = recvfrom(m_sConnectionSocket, buffer, sizeof(buffer), 0,
 				(SOCKADDR*)&device.m_SockAddr, &cs_addrsize);
 
-			WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
-				NIX(if (len < 0))
+			if (len < 0)
 			{
-				device.m_Status = ConnectedDevice::Status::Disabled;
-				device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
-				return false;
+				WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
+				{
+					device.m_Status = ConnectedDevice::Status::Disabled;
+					device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
+					return false;
+				}
 			}
 
 			if (strcmp(buffer, MEOF) == 0)
