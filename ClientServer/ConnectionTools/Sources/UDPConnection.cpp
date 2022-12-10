@@ -580,6 +580,7 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	char strBytes[32];
 	char msg[WM_SIZE];
 	int getted = 0;
+	long long size = 0;
 
 	int amount = 1;
 	const int maxAmount = 10;
@@ -606,7 +607,7 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 				WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
 				{
 					device.m_Status = ConnectedDevice::Status::Disabled;
-					device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
+					device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, size, "");
 					return false;
 				}
 			}
@@ -643,6 +644,8 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 			isWasError = 0;
 			amount = 1;
 		}
+
+		size += getted;
 	} while (getted != 0);
 
 	return true;
