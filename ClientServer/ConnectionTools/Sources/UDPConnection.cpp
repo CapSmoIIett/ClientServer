@@ -617,6 +617,7 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	{
 		do
 		{
+			getted = 0;
 			int sizeOfmsg = MSG_SIZE * amount;
 
 			socklen_t cs_addrsize = sizeof(device.m_SockAddr);
@@ -636,9 +637,13 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 			if (strcmp(buffer, WM_END) == 0)
 				return true;
 
-			std::sprintf(strBytes, "%d", getted);
-			sendto(m_sConnectionSocket, strBytes, sizeof(strBytes), 0,
-				(SOCKADDR*)&device.m_SockAddr, (int)cs_addrsize);
+			int bytesSended = 0;
+			do
+			{
+				std::sprintf(strBytes, "%d", getted);
+				bytesSended = sendto(m_sConnectionSocket, strBytes, sizeof(strBytes), 0,
+					(SOCKADDR*)&device.m_SockAddr, (int)cs_addrsize);
+			} while (bytesSended == 0);
 
 			WIN(ZeroMemory(msg, sizeof(msg)));
 			NIX(memset(msg, 0, sizeof(msg)));
@@ -660,7 +665,10 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 
 			if (strcmp(msg, WM_END) == 0)
+			{
+				file.write(buffer, getted);
 				return true;
+			}
 
 		} while (strcmp(msg, WM_OK) != 0);
 
