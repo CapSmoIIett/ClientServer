@@ -184,13 +184,12 @@ bool UDPClient::SendFile(std::fstream& file)
 	if (!file.is_open())
 		return false;
 
+	int sizeOfmsg = MSG_SIZE * amount;
+	file.read(buffer, sizeOfmsg);
 	do
 	{
 		while (true)
 		{
-			int sizeOfmsg = MSG_SIZE * amount;
-
-			file.read(buffer, sizeOfmsg);
 
 			sended = sendto(m_sConnectionSocket, (char*)buffer, sizeOfmsg, 0,
 				(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
@@ -206,10 +205,21 @@ bool UDPClient::SendFile(std::fstream& file)
 				return false;
 			}
 
+			WIN(ZeroMemory(workMsg, sizeof(workMsg)));
+			NIX(memset(workMsg, 0, sizeof(workMsg)));
+
 			cs_addrsize = sizeof(m_ConnectionAddress);
 			recvfrom(m_sConnectionSocket, workMsg, sizeof(workMsg), 0,
 				(SOCKADDR*)&m_ConnectionAddress, &cs_addrsize);
 
+
+			if (file.gcount() == 0)
+			{
+				sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
+					(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
+				return true;
+
+			}
 			if (atoi(workMsg) == sended)
 			{
 				sendto(m_sConnectionSocket, WM_OK, WM_SIZE, 0,
@@ -229,6 +239,10 @@ bool UDPClient::SendFile(std::fstream& file)
 			isWasError = 0;
 			amount = 1;
 		}
+
+		sizeOfmsg = MSG_SIZE * amount;
+
+		file.read(buffer, sizeOfmsg);
 	} while ((readed = file.gcount()) != 0);
 
 	sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
@@ -519,7 +533,7 @@ bool UDPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 
 	std::cout << "\n\n";
 
-	auto clock = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::system_clock::now();
 
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
@@ -567,8 +581,9 @@ bool UDPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
 		(struct sockaddr*)&device.m_SockAddr, cs_addrsize);
 
-	auto nanosec = clock.time_since_epoch();
-	std::cout << MSG_SIZE * counter / (static_cast<double>(nanosec.count()) / (1000000000.0)) << "\n";
+	auto end = std::chrono::system_clock::now();
+	std::cout << (static_cast<double>(MSG_SIZE * counter) / MB) / 
+		std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "\n";
 
 	return true;
 }
@@ -589,6 +604,8 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	if (!file.is_open())
 		return false;
+
+	auto start = std::chrono::system_clock::now();
 
 	do
 	{
@@ -650,6 +667,10 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		//size += getted;
 	} while (getted != 0);
+
+	auto end = std::chrono::system_clock::now();
+	std::cout << (static_cast<double>(MSG_SIZE * counter) / MB) / 
+		std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "\n";
 
 	return true;
 }
