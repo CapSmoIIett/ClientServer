@@ -180,6 +180,9 @@ bool UDPClient::SendFile(std::fstream& file)
 	bool isWasError = 0;
 	bool isEnd = 0;
 
+	const int waitMaxCount = 10;
+	int i = 0;
+
 	socklen_t cs_addrsize = 0;
 
 	if (!file.is_open())
@@ -211,12 +214,20 @@ bool UDPClient::SendFile(std::fstream& file)
 			NIX(memset(workMsg, 0, sizeof(workMsg)));
 
 			int msgReaded = 0;
-			do
+			for (i = 0; i < waitMaxCount; i++)
 			{
 				cs_addrsize = sizeof(m_ConnectionAddress);
 				msgReaded = recvfrom(m_sConnectionSocket, workMsg, sizeof(workMsg), 0,
 					(SOCKADDR*)&m_ConnectionAddress, &cs_addrsize);
-			} while (msgReaded == 0);
+
+				if (msgReaded != 0)
+				{
+					break;
+				}
+			} 
+
+			if (i == waitMaxCount)
+				continue;
 
 			Sleep(1);
 
@@ -224,32 +235,52 @@ bool UDPClient::SendFile(std::fstream& file)
 			if (isEnd)
 			{
 				int msgSended = 0;
-				do
+				for (i = 0; i < waitMaxCount; i++)
 				{
 					msgSended = sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
 						(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
-				} while (msgSended == 0);
+
+					if (msgSended != 0)
+						break;
+				} 
+
+				if (i == waitMaxCount)
+					continue;
+
 				return true;
 
 			}
 			if (atoi(workMsg) == sended)
 			{
 				int msgSended = 0;
-				do
+				for (i = 0; i < waitMaxCount; i++)
 				{
 					msgSended = sendto(m_sConnectionSocket, WM_OK, WM_SIZE, 0,
 						(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
-				} while (msgSended == 0);
+
+					if (msgSended != 0)
+						break;
+				} 
+
+				if (i == waitMaxCount)
+					continue;
 				break;
 			}
 			else
 			{
 				int msgSended = 0;
-				do
+				for (i = 0; i < waitMaxCount; i++)
 				{
 					msgSended = sendto(m_sConnectionSocket, WM_ERR, WM_SIZE, 0,
 						(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
-				} while (msgSended == 0);
+
+					if (msgSended != 0)
+						break;
+				} 
+
+				if (i == waitMaxCount)
+					continue;
+
 				isWasError = 1;
 			}
 		}
@@ -626,6 +657,9 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	const int maxSize = MSG_SIZE * maxAmount;
 	char buffer[maxSize];
 
+	const int waitMaxCount = 10;
+	int i = 0;
+
 	bool isWasError = 0;
 
 	if (!file.is_open())
@@ -658,23 +692,36 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 				return true;
 
 			int bytesSended = 0;
-			do
+			for (i = 0; i < waitMaxCount; i++)
 			{
+
 				std::sprintf(strBytes, "%d", getted);
 				bytesSended = sendto(m_sConnectionSocket, strBytes, sizeof(strBytes), 0,
 					(SOCKADDR*)&device.m_SockAddr, (int)cs_addrsize);
-			} while (bytesSended == 0);
+
+				if (bytesSended != 0)
+					break;
+			} 
+
+			if (i == waitMaxCount)
+				continue;
 
 			WIN(ZeroMemory(msg, sizeof(msg)));
 			NIX(memset(msg, 0, sizeof(msg)));
 
 			int msgReaded = 0;
-			do
+			for (i = 0; i < waitMaxCount; i++)
 			{
 				socklen_t cs_addrsize = sizeof(device.m_SockAddr);
 				msgReaded = recvfrom(m_sConnectionSocket, (char*)msg, sizeof(msg), 0,
 					(SOCKADDR*)&device.m_SockAddr, &cs_addrsize);
-			} while (msgReaded == 0);
+
+				if (msgReaded != 0)
+					break;
+			} 
+
+			if (i == waitMaxCount)
+				continue;
 
 			std::cout << msg << "\n";
 			if (strcmp(msg, WM_ERR) == 0)
