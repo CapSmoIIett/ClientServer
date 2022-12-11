@@ -523,8 +523,10 @@ bool UDPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
 	char workMsg[32];
 	int readed = 0;
-	int counter = 0;
 	int sended = 0;
+	int amount = 1;
+
+	long long counter = 0;
 
 	socklen_t cs_addrsize = 0;
 
@@ -572,7 +574,7 @@ bool UDPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 		}
 
 		//std::cout << "|";
-
+		counter += amount;
 		file.read(buffer, sizeof(buffer));
 
 		counter++;
@@ -593,7 +595,7 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	char strBytes[32];
 	char msg[WM_SIZE];
 	int getted = 0;
-	long long size = 0;
+	long long counter = 0;
 
 	int amount = 1;
 	const int maxAmount = 10;
@@ -622,7 +624,7 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 				WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
 				{
 					device.m_Status = ConnectedDevice::Status::Disabled;
-					device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, size, "");
+					device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
 					return false;
 				}
 			}
@@ -659,13 +661,15 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 		file.write(buffer, getted);
 
+		counter += amount;
+
+
 		if (isWasError)
 		{
 			isWasError = 0;
 			amount = 1;
 		}
 
-		//size += getted;
 	} while (getted != 0);
 
 	auto end = std::chrono::system_clock::now();
