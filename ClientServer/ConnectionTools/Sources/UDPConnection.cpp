@@ -287,7 +287,7 @@ bool UDPClient::GetFile(std::fstream& file)
 				cs_addrsize = sizeof(m_ConnectionAddress);
 				recvfrom(m_sConnectionSocket, (char*)msg, sizeof(msg), 0,
 					(SOCKADDR*)&m_ConnectionAddress, &cs_addrsize);
-				if (strcmp(msg, WM_ERR) != 0)
+				if (strcmp(msg, WM_ERR) == 0)
 				{
 					isWasError = 1;
 					continue;
@@ -610,6 +610,9 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 				}
 			}
 
+			if (strcmp(buffer, WM_END) == 0)
+				return true;
+
 			std::sprintf(strBytes, "%d", getted);
 			sendto(m_sConnectionSocket, strBytes, sizeof(strBytes), 0, 
 				(SOCKADDR*)&device.m_SockAddr, (int)cs_addrsize);
@@ -623,12 +626,14 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 				recvfrom(m_sConnectionSocket, (char*)msg, sizeof(msg), 0,
 					(SOCKADDR*)&device.m_SockAddr, &cs_addrsize);
 
-				if (strcmp(msg, WM_ERR) != 0)
+				std::cout << msg << "\n";
+				if (strcmp(msg, WM_ERR) == 0)
 				{
 					isWasError = 1;
-					continue;
+					break;
 				}
 			} while (strcmp(msg, WM_OK) != 0 && strcmp(msg, WM_END) != 0);
+
 
 			if (strcmp(msg, WM_END) == 0)
 				return true;
@@ -643,7 +648,7 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 			amount = 1;
 		}
 
-		size += getted;
+		//size += getted;
 	} while (getted != 0);
 
 	return true;
