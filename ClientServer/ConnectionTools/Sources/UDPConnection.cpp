@@ -208,12 +208,16 @@ bool UDPClient::SendFile(std::fstream& file)
 			WIN(ZeroMemory(workMsg, sizeof(workMsg)));
 			NIX(memset(workMsg, 0, sizeof(workMsg)));
 
-			cs_addrsize = sizeof(m_ConnectionAddress);
-			recvfrom(m_sConnectionSocket, workMsg, sizeof(workMsg), 0,
-				(SOCKADDR*)&m_ConnectionAddress, &cs_addrsize);
+			int msgReaded = 0;
+			do
+			{
+				cs_addrsize = sizeof(m_ConnectionAddress);
+				msgReaded = recvfrom(m_sConnectionSocket, workMsg, sizeof(workMsg), 0,
+					(SOCKADDR*)&m_ConnectionAddress, &cs_addrsize);
+			} while (msgReaded == 0);
+			
 
-
-			if (file.gcount() == 0)
+			if (file.gcount() < sizeOfmsg)
 			{
 				sendto(m_sConnectionSocket, WM_END, WM_SIZE, 0,
 					(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
@@ -633,25 +637,26 @@ bool UDPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 				return true;
 
 			std::sprintf(strBytes, "%d", getted);
-			sendto(m_sConnectionSocket, strBytes, sizeof(strBytes), 0, 
+			sendto(m_sConnectionSocket, strBytes, sizeof(strBytes), 0,
 				(SOCKADDR*)&device.m_SockAddr, (int)cs_addrsize);
 
 			WIN(ZeroMemory(msg, sizeof(msg)));
 			NIX(memset(msg, 0, sizeof(msg)));
 
+			int msgReaded = 0;
 			do
 			{
 				socklen_t cs_addrsize = sizeof(device.m_SockAddr);
-				recvfrom(m_sConnectionSocket, (char*)msg, sizeof(msg), 0,
+				msgReaded = recvfrom(m_sConnectionSocket, (char*)msg, sizeof(msg), 0,
 					(SOCKADDR*)&device.m_SockAddr, &cs_addrsize);
+			} while (msgReaded == 0);
 
-				std::cout << msg << "\n";
-				if (strcmp(msg, WM_ERR) == 0)
-				{
-					isWasError = 1;
-					break;
-				}
-			} while (strcmp(msg, WM_OK) != 0 && strcmp(msg, WM_END) != 0);
+			std::cout << msg << "\n";
+			if (strcmp(msg, WM_ERR) == 0)
+			{
+				isWasError = 1;
+				break;
+			}
 
 
 			if (strcmp(msg, WM_END) == 0)
