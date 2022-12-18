@@ -174,7 +174,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 		//if (str != "OK")
 		//	continue;
 
-		Send(std::to_string(readed));
+		Send("OK");
 
 		//sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
 
