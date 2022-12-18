@@ -8,13 +8,14 @@
 #include <fstream>
 #include <thread>
 
-#include "../ConnectionTools/Headers/TCPConnection.h"
+//#include "../ConnectionTools/Headers/TCPConnection.h"
+#include "../ConnectionTools/Headers/OneThread.h"
 #include "../ConnectionTools/Headers/UDPConnection.h"
 
 int main()
 {
-	//TCPClient client;
-	UDPClient client;
+	OTTCPClient client;
+	//UDPClient client;
 	std::string msg;
 	std::vector<std::string> commands;
 
@@ -58,13 +59,6 @@ int main()
 
 			if (!client.isConnected())
 				continue;
-
-			auto str = client.Get();
-
-			ConnectionLostInfo clInfo;
-			clInfo.Read(str);
-
-			CLItoCMD(clInfo, commands);
 		}
 
 		if (commands[0] == "send")

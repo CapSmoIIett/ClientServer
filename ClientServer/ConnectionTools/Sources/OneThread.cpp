@@ -1,4 +1,4 @@
-#include "../Headers/TCPConnection.h"
+#include "../Headers/OneThread.h"
 
 #include <iostream>
 #include <string>
@@ -7,10 +7,10 @@
 #include <chrono>
 
 #define MEOF "EOF"
-#define MSG_SIZE KB 
+#define MSG_SIZE KB * 16
 
 
-TCPClient::TCPClient() :
+OTTCPClient::OTTCPClient() :
 #if defined(OS_WINDOWS)
 	m_pWsaData(),
 #endif
@@ -19,7 +19,7 @@ TCPClient::TCPClient() :
 
 }
 
-bool TCPClient::Start()
+bool OTTCPClient::Start()
 {
 	WIN(m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr("127.0.0.1"));
 	NIX(m_ConnectionAddress.sin_addr.s_addr = INADDR_ANY);
@@ -36,11 +36,12 @@ bool TCPClient::Start()
 	return true;
 }
 
-bool TCPClient::Connect(const char* ip)
+bool OTTCPClient::Connect(const char* ip)
 {
 	int result = 0;
 
 	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
+	//m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (m_sConnectionSocket == INVALID_SOCKET)
 	{
 		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
@@ -62,42 +63,13 @@ bool TCPClient::Connect(const char* ip)
 		return false;
 	}	
 
-	int flag = 1;
-#ifdef OS_WINDOWS
-	tcp_keepalive ka { 1, 10 * 1000, 3 * 1000 };
-
-	setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag));
-	//if (setsockopt(ClientSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag)) != 0) 
-	//	return false;
-
-	unsigned long numBytesReturned = 0;
-
-	WSAIoctl(m_sConnectionSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr);
-	//if (WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr) != 0) 
-	//	return false;
-#else //POSIX
-	//if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)) == -1) return false;
-	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &ka_conf.ka_idle, sizeof(ka_conf.ka_idle)) == -1) return false;
-	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &ka_conf.ka_intvl, sizeof(ka_conf.ka_intvl)) == -1) return false;
-	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &ka_conf.ka_cnt, sizeof(ka_conf.ka_cnt)) == -1) return false;
-	int idle = 10;
-	int intvl = 3;
-	int cnt = 5;
-
-	setsockopt(m_sConnectionSocket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag));
-	setsockopt(m_sConnectionSocket, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(ka_conf.ka_idle));
-	setsockopt(m_sConnectionSocket, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(ka_conf.ka_intvl));
-	setsockopt(m_sConnectionSocket, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(ka_conf.ka_cnt));
-#endif
-
-
 	std::cout << "connected";
 
 	return true;
 }
 
 
-bool TCPClient::ShutdownProcess()
+bool OTTCPClient::ShutdownProcess()
 {
 	/*if (m_pAddrInfo != nullptr)
 	{
@@ -121,28 +93,23 @@ bool TCPClient::ShutdownProcess()
 }
 
 
-std::string TCPClient::Get()
+std::string OTTCPClient::Get()
 {
 	int amountBytes = 0;
 	char recvBuffer[512];
 	std::string result;
+	WSABUF DataBuf;
+	DWORD RecvBytes = 0;
+	DWORD flags = 0;
 
 	do
 	{
 		WIN(ZeroMemory(recvBuffer, sizeof(recvBuffer)));
 		NIX(memset(recvBuffer, 0, sizeof(recvBuffer)));
 
-		WIN
-		(
-			u_long t = true;
-			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-
-			amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), 0);
-
-			t = false;
-			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-		);
-		NIX(amountBytes = recv(m_sConnectionSocket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT));
+		amountBytes = recv(m_sConnectionSocket, (char*)recvBuffer, sizeof(recvBuffer), 0);
+		//WSARecv(m_sConnectionSocket, &DataBuf, 1, &RecvBytes, &flags, NULL, NULL);
+		//WSARecv(SI->Socket, &(SI->DataBuf), 1, &RecvBytes, &Flags, &(SI->Overlapped), NULL);
 
 		result += std::string(recvBuffer);
 	} while (amountBytes > sizeof(recvBuffer));
@@ -150,24 +117,25 @@ std::string TCPClient::Get()
 	return result;
 }
 
-bool TCPClient::Send(std::string msg)
+bool OTTCPClient::Send(std::string msg)
 {
 
-	WIN
-	(
-		if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
-			return ShutdownProcess();
-	);
-	NIX
-	(
-		if (send(m_sConnectionSocket, msg.c_str(), msg.size(), 0) < 0)
-			return ShutdownProcess();
-	);
+	WSABUF DataBuf;
+	DWORD SendBytes = 0;
+
+	DataBuf.buf = (char*)msg.c_str();
+	DataBuf.len = msg.size();
+
+	msg += "\0";
+
+	if (send(m_sConnectionSocket, msg.c_str(), msg.size() + 1, 0) == SOCKET_ERROR)
+	//if (WSASend(m_sConnectionSocket, &DataBuf, 1, &SendBytes, 0, &AcceptOverlapped, NULL) == SOCKET_ERROR)
+		return false;
 
 	return true;
 }
 
-bool TCPClient::Disconnect()
+bool OTTCPClient::Disconnect()
 {
 	auto iResult = shutdown(m_sConnectionSocket, SD_SEND);
 	if (WIN(iResult == SOCKET_ERROR)NIX(iResult < 0))
@@ -186,7 +154,7 @@ bool TCPClient::Disconnect()
 	return false;
 }
 
-bool TCPClient::SendFile(std::fstream& file)
+bool OTTCPClient::SendFile(std::fstream& file)
 {
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
 	int sended = 0;
@@ -195,10 +163,22 @@ bool TCPClient::SendFile(std::fstream& file)
 	if (!file.is_open())
 		return false;
 
+	Sleep(10);
+
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
 	{
+		Send("uploading");
+
+		auto str = Get();
+		if (str != "OK")
+			continue;
+
 		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+
+		auto str2 = Get();
+		if (str != "OK")
+			continue;
 	
 		if (sended < 0)
 		{
@@ -217,12 +197,13 @@ bool TCPClient::SendFile(std::fstream& file)
 	WIN(Sleep(1000));
 	NIX(sleep(1000));
 
-	send(m_sConnectionSocket, (char*)MEOF, sizeof(MEOF), 0);
+	Send("EOF");
+	//send(m_sConnectionSocket, (char*)"", sizeof(MEOF), 0);
 
 	return true;
 }
 
-bool TCPClient::GetFile(std::fstream& file)
+bool OTTCPClient::GetFile(std::fstream& file)
 {
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
 	int len = 0;
@@ -271,7 +252,7 @@ bool TCPClient::GetFile(std::fstream& file)
 //-----------------------------------------------------------------------------------------------
 
 
-TCPServer::TCPServer() :
+OTTCPServer::OTTCPServer() :
 #if defined(OS_WINDOWS)
 	m_pWsaData(),
 #endif
@@ -280,7 +261,7 @@ TCPServer::TCPServer() :
 	isClose = false;
 }
 
-bool TCPServer::Start()
+bool OTTCPServer::Start()
 {
 	WIN(m_ServerAddress.sin_addr.S_un.S_addr = INADDR_ANY);
 	NIX(m_ServerAddress.sin_addr.s_addr = INADDR_ANY);
@@ -297,11 +278,12 @@ bool TCPServer::Start()
 	return true;
 }
 
-bool TCPServer::Connect()
+bool OTTCPServer::Connect()
 {
 	int result = 0;
 
 	m_sConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
+	//m_sConnectionSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	if (m_sConnectionSocket == INVALID_SOCKET)
 	{
 		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
@@ -322,24 +304,60 @@ bool TCPServer::Connect()
 		return false;
 	}
 
+	ULONG NonBlock = 1;
+	ioctlsocket(m_sConnectionSocket, FIONBIO, &NonBlock);
+	if (m_sConnectionSocket == INVALID_SOCKET)
+	{
+		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
+		return false;
+	}
+
+
+
 	return true;
 }
 
-ConnectedDevice& TCPServer::Access()
+bool OTTCPServer::Access()
 {
 	WIN(SOCKADDR_IN cs_addr);
 	NIX(sockaddr_in cs_addr);
 
+	SOCKET ClientSocket;
+
+	FD_ZERO(&ReadSet);
+	FD_ZERO(&WriteSet);
+
+	TIMEVAL time;
+	time.tv_sec = 0;
+	time.tv_usec = 10;
+
+	FD_SET(m_sConnectionSocket, &ReadSet);
+
+	if (select(0, &ReadSet, &WriteSet, NULL, &time) == SOCKET_ERROR)
+	{
+		WIN(printf("Error: Invalid Socket (%d)\n", WSAGetLastError()));
+		return false;
+	}
+
+
+
+	if (!FD_ISSET(m_sConnectionSocket, &ReadSet))
+		return false;
+
 	socklen_t cs_addrsize = sizeof(cs_addr);
 
-	WIN(SOCKET ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize));
+	WIN(ClientSocket = accept(m_sConnectionSocket, (SOCKADDR*) &cs_addr, &cs_addrsize));
 	NIX(int ClientSocket = accept(m_sConnectionSocket, (sockaddr*) &cs_addr, &cs_addrsize));
 
+	ULONG NonBlock = 1;
+	ioctlsocket(ClientSocket, FIONBIO, &NonBlock);
+	//CreateSocketInformation(ClientSocket)
+
 	if (ClientSocket == INVALID_SOCKET)
-		return ConnectedDevice(ClientSocket, cs_addr, ConnectedDevice::Status::Disabled);
+		return false;
 
 	int flag = 1;
-#ifdef OS_WINDOWS
+
 	tcp_keepalive ka { 1, 10 * 1000, 3 * 1000 };
 
 	setsockopt(ClientSocket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&flag, sizeof(flag));
@@ -348,23 +366,9 @@ ConnectedDevice& TCPServer::Access()
 
 	unsigned long numBytesReturned = 0;
 
-	WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr);
+	//WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr);
 	//if (WSAIoctl(ClientSocket, SIO_KEEPALIVE_VALS, &ka, sizeof(ka), nullptr, 0, &numBytesReturned, 0, nullptr) != 0) 
 	//	return false;
-#else //POSIX
-	//if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)) == -1) return false;
-	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &ka_conf.ka_idle, sizeof(ka_conf.ka_idle)) == -1) return false;
-	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &ka_conf.ka_intvl, sizeof(ka_conf.ka_intvl)) == -1) return false;
-	//if (setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &ka_conf.ka_cnt, sizeof(ka_conf.ka_cnt)) == -1) return false;
-	int idle = 10;
-	int intvl = 3;
-	int cnt = 5;
-
-	setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag));
-	setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(ka_conf.ka_idle));
-	setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(ka_conf.ka_intvl));
-	setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(ka_conf.ka_cnt));
-#endif
 
 
 	ConnectedDevice device(ClientSocket, cs_addr, ConnectedDevice::Status::Connected);
@@ -379,7 +383,7 @@ ConnectedDevice& TCPServer::Access()
 		device.m_CLInfo = connectedDevice->m_CLInfo;
 		*connectedDevice = device;
 		std::cout << "client reconect\n";
-		return device;
+		return false;
 	}
 
 	m_vSockets.push_back(ClientSocket);
@@ -387,10 +391,10 @@ ConnectedDevice& TCPServer::Access()
 
 	std::cout << "client connected\n";
 
-	return device;
+	return true;
 }
 
-bool TCPServer::ShutdownProcess()
+bool OTTCPServer::ShutdownProcess()
 {
 	/*if (m_pAddrInfo != nullptr)
 	{
@@ -425,60 +429,55 @@ bool TCPServer::ShutdownProcess()
 	return false; 
 }
 
-std::string TCPServer::Get(ConnectedDevice& device)
+std::string OTTCPServer::Get(ConnectedDevice& device)
 {
 	int amountBytes = 0;
 	char recvBuffer[512];
 	std::string result;
 
+	WSABUF DataBuf;
+	DWORD RecvBytes = 0;
+	DWORD flags = 0;
+	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+	WSAOVERLAPPED AcceptOverlapped;
 
-	do
+	EventArray[0] = WSACreateEvent();
+
+	ZeroMemory(&AcceptOverlapped, sizeof(WSAOVERLAPPED));
+	AcceptOverlapped.hEvent = EventArray[0];
+
+	DataBuf.buf = recvBuffer;
+	DataBuf.len = sizeof(recvBuffer);
+
+	amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
+	/*if (WSARecv(device.m_Socket, &DataBuf, 1, &RecvBytes, &flags, NULL, NULL) == SOCKET_ERROR)
 	{
-		WIN(ZeroMemory(recvBuffer, sizeof(recvBuffer)));
-		NIX(memset(recvBuffer, 0, sizeof(recvBuffer)));
+		return "ERROR";
+	}*/
+	//amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
 
-#if defined(OS_WINDOWS)
-		u_long t = true; 
-		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-
-		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), 0);
-
-		t = false;
-		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-#else
-		amountBytes = recv(device.m_Socket, recvBuffer, sizeof(recvBuffer), MSG_DONTWAIT);
-#endif
-		
-		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
-		NIX(if (amountBytes < 0))
-		{
-			device.m_Status = ConnectedDevice::Status::Disabled;
-			return "";
-		}
-
+	if (amountBytes > 0)
 		result += std::string(recvBuffer);
-	} while (amountBytes >= sizeof(recvBuffer));
 
 	return result;
 }
 
-bool TCPServer::Send(ConnectedDevice& device, std::string msg)
+bool OTTCPServer::Send(ConnectedDevice& device, std::string msg)
 {
-	WIN
-	(
-		if (send(device.m_Socket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
-			return ShutdownProcess()
-	);
-	NIX
-	(
-		if (send(device.m_Socket, msg.c_str(), msg.size(), 0) < 0)
-			return ShutdownProcess()
-	);
+	WSABUF DataBuf;
+	DWORD SendBytes = 0;
 
-	return false;
+	DataBuf.buf = (char*)msg.c_str();
+	DataBuf.len = msg.size();
+
+	if (send(device.m_Socket, msg.c_str(), msg.size(), 0) == SOCKET_ERROR)
+	//if (WSASend(m_sConnectionSocket, &DataBuf, 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR)
+		return false;
+
+	return true;
 }
 
-bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
+bool OTTCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 {
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
 	int readed = 0;
@@ -525,54 +524,26 @@ bool TCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	return true;
 }
 
-bool TCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
+bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 {
 	char buffer[MSG_SIZE]; //выделяем блок 1 Кб
 	int len = 0;
 	int counter = 0;
 
+	WSABUF DataBuf;
+	DWORD RecvBytes = 0;
+
 	if (!file.is_open())
 		return false;
 
-	std::cout << "\n\n";
+	DWORD flags = 0;
+	//WSARecv(device.m_Socket, &DataBuf, 1, &RecvBytes, &flags, NULL, NULL);
+		//len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+	len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
 
-	auto start = std::chrono::system_clock::now();
-	//auto clock = std::chrono::high_resolution_clock::now();
+	//file.write(DataBuf.buf, DataBuf.len);
+	file.write(buffer, len);
 
-	do
-	{
-#if defined(OS_WINDOWS)
-		u_long t = true; 
-		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-
-		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
-
-		t = false;
-		//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-#else
-		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT);
-#endif
-
-		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
-		NIX(if (len < 0))
-		{
-			device.m_Status = ConnectedDevice::Status::Disabled;
-			counter-= 100;
-			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::upload, counter * MSG_SIZE, "");
-			return false;
-		}
-
-		if (strcmp(buffer, MEOF) == 0)
-			break;
-
-		file.write(buffer, len);
-
-		counter++;
-	} while (len > 0);
-
-	auto end = std::chrono::system_clock::now();
-	std::cout << (static_cast<double>(MSG_SIZE * counter) / MB) / 
-		std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "\n";
 
 	return true;
 }
