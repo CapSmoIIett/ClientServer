@@ -562,8 +562,8 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
 
 
-		if (len == atoi(size.c_str()))
-			break;
+		//if (len == atoi(size.c_str()))
+		//	break;
 
 		Send(device, "NOTOK");
 	}
