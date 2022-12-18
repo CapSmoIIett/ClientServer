@@ -58,6 +58,14 @@ bool UDPClient::Connect(const char* ip)
 		return false;
 	}
 
+	DWORD optValue = TRUE;
+
+	/*if (setsockopt(m_sConnectionSocket, IPPROTO_UDP, UDP_CHECKSUM_COVERAGE, (const char*)&optValue, sizeof(optValue)) == -1)
+	{
+		printf("setsockopt failed with error: %d\n", WSAGetLastError());
+		exit(EXIT_FAILURE);
+	}*/
+
 	if (ip != nullptr)
 	{
 		WIN(m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr(ip));
@@ -173,7 +181,7 @@ bool UDPClient::SendFile(std::fstream& file)
 	int readed = 0;
 
 	int amount = 1;
-	const int maxAmount = 10;
+	const int maxAmount = 20;
 	const int maxSize = MSG_SIZE * maxAmount;
 	char buffer[maxSize];
 
@@ -182,6 +190,8 @@ bool UDPClient::SendFile(std::fstream& file)
 
 	const int waitMaxCount = 10;
 	int i = 0;
+
+	int number = 0;
 
 	socklen_t cs_addrsize = 0;
 
@@ -212,6 +222,21 @@ bool UDPClient::SendFile(std::fstream& file)
 
 			WIN(ZeroMemory(workMsg, sizeof(workMsg)));
 			NIX(memset(workMsg, 0, sizeof(workMsg)));
+			
+			/*int bytesSended = 0;
+			for (i = 0; i < waitMaxCount; i++)
+			{
+				char strBytes[32];
+				std::sprintf(strBytes, "%d", number + 1);
+				bytesSended = sendto(m_sConnectionSocket, (char*)strBytes, sizeof(strBytes), 0,
+					(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
+
+				if (bytesSended != 0)
+					break;
+			}*/
+
+			if (i == waitMaxCount)
+				continue;
 
 			int msgReaded = 0;
 			for (i = 0; i < waitMaxCount; i++)
@@ -229,7 +254,13 @@ bool UDPClient::SendFile(std::fstream& file)
 			if (i == waitMaxCount)
 				continue;
 
-			Sleep(1);
+			std::string strWorkMsg(workMsg);
+			std::string str = strWorkMsg.substr(strWorkMsg.find("|") + 1, strWorkMsg.size());
+			strWorkMsg = strWorkMsg.substr(0, strWorkMsg.find("|"));
+
+			//Sleep(1);
+
+			
 
 
 			if (isEnd)
@@ -250,13 +281,17 @@ bool UDPClient::SendFile(std::fstream& file)
 				return true;
 
 			}
-			if (atoi(workMsg) == sended)
+			//if (atoi(workMsg) == sended)
+			if (atoi(strWorkMsg.c_str()) == sended && atoi(str.c_str()) == number)
 			{
 				int msgSended = 0;
 				for (i = 0; i < waitMaxCount; i++)
 				{
 					msgSended = sendto(m_sConnectionSocket, WM_OK, WM_SIZE, 0,
 						(struct sockaddr*)&m_ConnectionAddress, sizeof(m_ConnectionAddress));
+					number++;
+					if (amount < maxAmount)
+						amount++;
 
 					if (msgSended != 0)
 						break;
