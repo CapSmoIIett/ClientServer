@@ -555,7 +555,7 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	DWORD flags = 0;
 
-	do
+	while (1)
 	{
 		//WSARecv(device.m_Socket, &DataBuf, 1, &RecvBytes, &flags, NULL, NULL);
 			//len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
@@ -565,7 +565,8 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 		//if (len == atoi(size.c_str()))
 		//	break;
 
-	} while (len <= 0);
+		Send(device, "NOTOK");
+	}
 
 	
 	Send(device, "OK");
