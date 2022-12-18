@@ -176,7 +176,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 
 		Send(std::to_string(readed));
 
-		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+		//sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
 
 		while (1)
 		{
@@ -184,7 +184,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 
 			auto str2 = Get();
 
-			if (str == "OK")
+			if (str2 == "OK")
 				break;
 		}
 	
@@ -200,6 +200,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 		}
 
 		file.read(buffer, sizeof(buffer));
+		Sleep(100);
 	}
 
 	WIN(Sleep(1000));
@@ -546,7 +547,11 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	Send(device, "OK");
 
-	auto size = Get(device);
+	std::string msg;
+	do
+	{
+		msg = Get(device);
+	} while (msg != "OK");
 
 	DWORD flags = 0;
 
