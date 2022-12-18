@@ -7,7 +7,7 @@
 #include <chrono>
 
 #define MEOF "EOF"
-#define MSG_SIZE KB * 16
+#define MSG_SIZE KB * 4
 
 
 OTTCPClient::OTTCPClient() :
@@ -171,14 +171,22 @@ bool OTTCPClient::SendFile(std::fstream& file)
 		Send("uploading");
 
 		auto str = Get();
-		if (str != "OK")
-			continue;
+		//if (str != "OK")
+		//	continue;
+
+		Send(std::to_string(readed));
 
 		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
 
-		auto str2 = Get();
-		if (str != "OK")
-			continue;
+		while (1)
+		{
+		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+
+			auto str2 = Get();
+
+			if (str == "OK")
+				break;
+		}
 	
 		if (sended < 0)
 		{
@@ -536,10 +544,27 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	if (!file.is_open())
 		return false;
 
+	Send(device, "OK");
+
+	auto size = Get(device);
+
 	DWORD flags = 0;
-	//WSARecv(device.m_Socket, &DataBuf, 1, &RecvBytes, &flags, NULL, NULL);
-		//len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
-	len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+
+	while (1)
+	{
+		//WSARecv(device.m_Socket, &DataBuf, 1, &RecvBytes, &flags, NULL, NULL);
+			//len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+		len = recv(device.m_Socket, (char*)buffer, sizeof(buffer), 0);
+
+
+		if (len == atoi(size.c_str()))
+			break;
+
+		Send(device, "NOTOK");
+	}
+
+	
+	Send(device, "OK");
 
 	//file.write(DataBuf.buf, DataBuf.len);
 	file.write(buffer, len);

@@ -86,9 +86,8 @@ int main()
 					}
 					else if (cmd[0] == "uploading")
 					{
-						server.Send(server.GetConnectedDevices()[i], "OK");
 						server.GetFile(server.GetConnectedDevices()[i], file);
-						server.Send(server.GetConnectedDevices()[i], "OK");
+						//server.Send(server.GetConnectedDevices()[i], "OK");
 					}
 					else if (cmd[0] == "download")
 					{
