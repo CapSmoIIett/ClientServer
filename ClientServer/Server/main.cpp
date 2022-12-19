@@ -112,6 +112,7 @@ int main()
 					else if (cmd[0] == "EOF")
 					{
 						file.close();
+						std::cout << "EOF" << "\n";
 					}
 					else if (isEcho)
 					{

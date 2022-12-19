@@ -176,7 +176,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 		do
 		{
 			Send("uploading");
-		} while ((str = Get()) == "OK");
+		} while ((str = Get()) != "OK");
 
 		t = false;
 		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
