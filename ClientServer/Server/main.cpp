@@ -29,6 +29,9 @@ int main()
 
 	server.Connect();
 	
+	std::vector<STARTUPINFO> SIs;
+	std::vector<PROCESS_INFORMATION> PIs;
+
 	// Command processing
 	while (true)
 	{
@@ -36,48 +39,36 @@ int main()
 		{
 			server.Access();
 
-			server.Send(server.GetConnectedDevices()[0], server.GetConnectedDevices()[0].m_CLInfo.Write());
+			STARTUPINFO si;
+			PROCESS_INFORMATION pi;
+
+			ZeroMemory(&si, sizeof(si));
+			ZeroMemory(&pi, sizeof(pi));
+			si.cb = sizeof(si);
+
+			if (!CreateProcess(NULL,
+				NULL,
+				NULL,
+				NULL,
+				FALSE,
+				0,
+				NULL,
+				NULL,
+				&si,
+				&pi)
+				)
+			{
+				std::cout << "Create process error.\n";
+			}
+
+
+			SIs.push_back(si);
+			PIs.push_back(pi);
 
 			if (!server.GetConnectedDevices()[0].m_CLInfo.m_sFileName.empty())
 			{
 				CLItoCMD(server.GetConnectedDevices()[0].m_CLInfo, cmd);
 
-				if (cmd[0] == "reupload")
-				{
-					std::fstream file;
-					file.open(cmd[1], std::fstream::out | std::fstream::in | std::fstream::binary);
-
-					file.seekp(atoi(cmd[2].c_str()), std::ios::beg);
-
-					server.GetFile(server.GetConnectedDevices()[0], file);
-
-					if ((server.GetConnectedDevices()[0]).m_Status == ConnectedDevice::Status::Disabled)
-					{
-						server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = cmd[1];
-						server.GetConnectedDevices()[0].m_CLInfo.m_iBytesAlredy += atoi(cmd[2].c_str());
-						break;
-					}
-
-					file.close();
-				}
-				else if (cmd[0] == "redownload")
-				{
-					std::fstream file;
-					file.open(cmd[1], std::fstream::in | std::fstream::binary);
-
-					file.seekg(atoi(cmd[2].c_str()), std::ios::beg);
-
-					server.SendFile(server.GetConnectedDevices()[0], file);
-
-					if ((server.GetConnectedDevices()[0]).m_Status == ConnectedDevice::Status::Disabled)
-					{
-						server.GetConnectedDevices()[0].m_CLInfo.m_sFileName = cmd[1];
-						server.GetConnectedDevices()[0].m_CLInfo.m_iBytesAlredy += atoi(cmd[2].c_str());
-						break;
-					}
-
-					file.close();
-				}
 			}
 
 			do
@@ -155,6 +146,9 @@ int main()
 			std::cout << "hello" << "\n";
 		}
 	}
+
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
 
 
 		server.ShutdownProcess();
