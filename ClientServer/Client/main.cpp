@@ -58,13 +58,6 @@ int main()
 
 			if (!client.isConnected())
 				continue;
-
-			auto str = client.Get();
-
-			ConnectionLostInfo clInfo;
-			clInfo.Read(str);
-
-			CLItoCMD(clInfo, commands);
 		}
 
 		if (commands[0] == "send")
@@ -114,22 +107,6 @@ int main()
 			client.SendFile(file);
 
 			file.close();
-		}
-		else if (commands[0] == "redownload")
-		{
-			std::fstream file;
-			file.open(commands[1], std::fstream::out | std::fstream::in | std::fstream::binary);
-
-			file.seekp(atoi(commands[2].c_str()), std::ios::beg);
-
-			client.GetFile(file);
-
-			file.close();
-		}
-
-		else if (commands[0] == "disconnect")
-		{
-			client.Disconnect();
 		}
 
 	} while (commands[0] != "q");

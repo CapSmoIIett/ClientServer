@@ -147,8 +147,11 @@ int main()
 		}
 	}
 
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
+	for (auto pi : PIs)
+	{
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+	}
 
 
 		server.ShutdownProcess();
