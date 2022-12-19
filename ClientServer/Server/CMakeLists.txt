@@ -12,6 +12,7 @@ endif()
 
 # Добавьте источник в исполняемый файл этого проекта.
 add_executable (Server "main.cpp" "../ConnectionTools/Headers/ConnectionInterface.h" "../ConnectionTools/Sources/TCPConnection.cpp" "../OSDefines.h" "../ConnectionTools/Headers/TCPConnection.h" "../ConnectionTools/Sources/ConnectionInterface.cpp" "../ConnectionTools/Headers/ClientServer.h"  "../ConnectionTools/Sources/ConnectionLostInfo.cpp" "../ConnectionTools/Sources/UDPConnection.cpp" "../ConnectionTools/Headers/UDPConnection.h")
+add_executable (subserver "submain.cpp" "../ConnectionTools/Headers/ConnectionInterface.h" "../ConnectionTools/Sources/TCPConnection.cpp" "../OSDefines.h" "../ConnectionTools/Headers/TCPConnection.h" "../ConnectionTools/Sources/ConnectionInterface.cpp" "../ConnectionTools/Headers/ClientServer.h"  "../ConnectionTools/Sources/ConnectionLostInfo.cpp" "../ConnectionTools/Sources/UDPConnection.cpp" "../ConnectionTools/Headers/UDPConnection.h")
 
 if(WIN32)
 	target_link_libraries(Server wsock32 ws2_32)

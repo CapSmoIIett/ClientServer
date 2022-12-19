@@ -58,7 +58,7 @@ class TCPClient : public ConnectionInterface
 {
 public:
 	TCPClient();
-	virtual bool Start() override;
+	virtual bool Start(int port = 2000);// override;
 	virtual bool Connect(const char* ip = "localhost");
 	virtual	bool ShutdownProcess() override;
 
@@ -100,7 +100,7 @@ class TCPServer : public ConnectionInterface
 {
 public:
 	TCPServer();
-	virtual bool Start() override;
+	virtual bool Start(int port = 2000);// override;
 	bool Connect();
 	ConnectedDevice& Access();
 	virtual	bool ShutdownProcess() override;

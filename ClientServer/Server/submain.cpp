@@ -10,10 +10,10 @@
 #include "../ConnectionTools/Headers/TCPConnection.h"
 #include "../ConnectionTools/Headers/UDPConnection.h"
 
-int main()
+int main(int argc, char* argv[])
 {
 	TCPServer server;
-//	UDPServer server;
+	//UDPServer server;
 	std::string msg;
 
 	using Commands = std::vector<std::string>;
@@ -32,42 +32,12 @@ int main()
 	std::vector<STARTUPINFO> SIs;
 	std::vector<PROCESS_INFORMATION> PIs;
 
-	int port = 2222;
-
 	// Command processing
 	while (true)
 	{
 		try
 		{
 			server.Access();
-
-			server.Send(server.GetConnectedDevices()[0], std::to_string(port));
-
-			STARTUPINFO si;
-			PROCESS_INFORMATION pi;
-
-			ZeroMemory(&si, sizeof(si));
-			ZeroMemory(&pi, sizeof(pi));
-			si.cb = sizeof(si);
-
-			if (!CreateProcess(NULL,
-				NULL,
-				NULL,
-				NULL,
-				FALSE,
-				0,
-				NULL,
-				NULL,
-				&si,
-				&pi)
-				)
-			{
-				std::cout << "Create process error.\n";
-			}
-
-
-			SIs.push_back(si);
-			PIs.push_back(pi);
 
 			if (!server.GetConnectedDevices()[0].m_CLInfo.m_sFileName.empty())
 			{
@@ -150,13 +120,6 @@ int main()
 			std::cout << "hello" << "\n";
 		}
 	}
-
-	for (pi : PIs)
-	{
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-	}
-
 
 		server.ShutdownProcess();
 

@@ -19,13 +19,13 @@ TCPClient::TCPClient() :
 
 }
 
-bool TCPClient::Start()
+bool TCPClient::Start(int port)
 {
 	WIN(m_ConnectionAddress.sin_addr.S_un.S_addr = inet_addr("127.0.0.1"));
 	NIX(m_ConnectionAddress.sin_addr.s_addr = INADDR_ANY);
 
 	m_ConnectionAddress.sin_family = AF_INET;
-	m_ConnectionAddress.sin_port = htons(2000);
+	m_ConnectionAddress.sin_port = htons(port);
 
 	WIN
 	(
@@ -280,13 +280,13 @@ TCPServer::TCPServer() :
 	isClose = false;
 }
 
-bool TCPServer::Start()
+bool TCPServer::Start(int port)
 {
 	WIN(m_ServerAddress.sin_addr.S_un.S_addr = INADDR_ANY);
 	NIX(m_ServerAddress.sin_addr.s_addr = INADDR_ANY);
 
 	m_ServerAddress.sin_family = AF_INET;
-	m_ServerAddress.sin_port = htons(2000);
+	m_ServerAddress.sin_port = htons(port);
 
 	WIN
 	(
