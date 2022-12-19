@@ -96,7 +96,7 @@ bool OTTCPClient::ShutdownProcess()
 std::string OTTCPClient::Get()
 {
 	int amountBytes = 0;
-	char recvBuffer[512];
+	char recvBuffer[MSG_SIZE];
 	std::string result;
 	WSABUF DataBuf;
 	DWORD RecvBytes = 0;
@@ -168,17 +168,28 @@ bool OTTCPClient::SendFile(std::fstream& file)
 	file.read(buffer, sizeof(buffer));
 	while ((readed = file.gcount()) != 0)
 	{
-		Send("uploading");
+		std::string str;
 
-		auto str = Get();
+		u_long t = true; 
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
+		do
+		{
+			Send("uploading");
+		} while ((str = Get()) == "OK");
+
+		t = false;
+		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
+
 		//if (str != "OK")
 		//	continue;
 
-		Send("OK");
 
 		//sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
 
-		while (1)
+		/*/while (1)
 		{
 		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
 
@@ -186,7 +197,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 
 			if (str2 == "OK")
 				break;
-		}
+		}*/
 	
 		if (sended < 0)
 		{
@@ -431,7 +442,7 @@ bool OTTCPServer::ShutdownProcess()
 std::string OTTCPServer::Get(ConnectedDevice& device)
 {
 	int amountBytes = 0;
-	char recvBuffer[512];
+	char recvBuffer[MSG_SIZE];
 	std::string result;
 
 	WSABUF DataBuf;
@@ -524,11 +535,12 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 
 	Send(device, "OK");
 
-	std::string msg;
+	/*std::string msg;
 	do
 	{
 		msg = Get(device);
 	} while (msg != "OK");
+	*/
 
 	DWORD flags = 0;
 
@@ -545,7 +557,7 @@ bool OTTCPServer::GetFile(ConnectedDevice& device, std::fstream& file)
 	} while (len <= 0);
 
 	
-	Send(device, "OK");
+	//Send(device, "OK");
 
 	//file.write(DataBuf.buf, DataBuf.len);
 	file.write(buffer, len);
