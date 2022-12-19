@@ -7,7 +7,7 @@
 #include <chrono>
 
 #define MEOF "EOF"
-#define MSG_SIZE KB * 4
+#define MSG_SIZE KB
 
 
 OTTCPClient::OTTCPClient() :
@@ -114,6 +114,7 @@ std::string OTTCPClient::Get()
 		result += std::string(recvBuffer);
 	} while (amountBytes > sizeof(recvBuffer));
 
+	//std::cout << "GET:" << result << "\n";
 	return result;
 }
 
@@ -132,6 +133,7 @@ bool OTTCPClient::Send(std::string msg)
 	//if (WSASend(m_sConnectionSocket, &DataBuf, 1, &SendBytes, 0, &AcceptOverlapped, NULL) == SOCKET_ERROR)
 		return false;
 
+//	std::cout << "Send:" << msg << "\n";
 	return true;
 }
 
@@ -170,24 +172,30 @@ bool OTTCPClient::SendFile(std::fstream& file)
 	{
 		std::string str;
 
-		u_long t = true; 
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		//u_long t = true; 
+
+		//auto a = ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+
+		/*		do
+		{
+			Send("uploading");
+		} while ((str = Get()) != "OK");
+		*/
+
+
 
 		do
 		{
 			Send("uploading");
-		} while ((str = Get()) != "OK");
-
-		t = false;
-		ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-
-
 		//if (str != "OK")
 		//	continue;
+		} while ((str = Get()) != "OK");
 
 
 		//sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+		//std::cout << "READED: " << readed << "\n";
 		sended = send(m_sConnectionSocket, (char*)buffer, readed, 0);
+		//std::cout << "SENDED: " << readed << "\n";
 
 		/*/while (1)
 		{
@@ -199,29 +207,19 @@ bool OTTCPClient::SendFile(std::fstream& file)
 				break;
 		}*/
 	
-		if (sended < 0)
-		{
-			int err = 0;
-			WIN(int)NIX(SockLen_t) len = sizeof(err);
-			WIN(err = WSAGetLastError());
-			getsockopt(m_sConnectionSocket, SOL_SOCKET, SO_ERROR, (char*) &err, &len);
-
-			WIN(printf("Error: Invalid Listen (%d)\n", WSAGetLastError()));
-			return false;
-		}
 
 		file.read(buffer, sizeof(buffer));
-		Sleep(120);
+		//Sleep(120);
 	}
 
-	WIN(Sleep(1000));
-	NIX(sleep(1000));
+//	WIN(Sleep(1000));
+	//NIX(sleep(1000));
 
 	Send("EOF");
 	//send(m_sConnectionSocket, (char*)"", sizeof(MEOF), 0);
 
 	return true;
-}
+}	
 
 bool OTTCPClient::GetFile(std::fstream& file)
 {

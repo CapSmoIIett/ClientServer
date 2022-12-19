@@ -92,6 +92,8 @@ int main()
 			client.Send(commands[0] + " " + commands[1]);
 			client.SendFile(file);
 
+			std::cout << "OUT" << "\n";
+
 			file.close();
 		}
 		else if (commands[0] == "get")
