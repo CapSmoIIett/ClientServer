@@ -200,7 +200,7 @@ bool OTTCPClient::SendFile(std::fstream& file)
 		}
 
 		file.read(buffer, sizeof(buffer));
-		Sleep(100);
+		Sleep(120);
 	}
 
 	WIN(Sleep(1000));
@@ -222,20 +222,9 @@ bool OTTCPClient::GetFile(std::fstream& file)
 
 	do
 	{
-		WIN
-		(
-			u_long t = true;
-			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
+		Send("downloading");
 
-			len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
-
-			t = false;
-			//ioctlsocket(m_sConnectionSocket, FIONBIO, &t);
-		);
-		NIX
-		(
-			len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), MSG_DONTWAIT)
-		);
+		len = recv(m_sConnectionSocket, (char*)buffer, sizeof(buffer), 0);
 
 		if (len < 0)
 		{
@@ -248,10 +237,11 @@ bool OTTCPClient::GetFile(std::fstream& file)
 			return false;
 		}
 
-		if (strcmp(buffer, MEOF) == 0)
+		file.write(buffer, len);
+
+		if (strcmp(buffer, "EOF") == 0)
 			break;
 
-		file.write(buffer, len);
 	} while (len != 0);
 
 	return true;
@@ -496,39 +486,26 @@ bool OTTCPServer::SendFile(ConnectedDevice& device, std::fstream& file)
 	if (!file.is_open())
 		return false;
 
-	std::cout << "\n\n";
-
-	auto start = std::chrono::system_clock::now();
-	//auto clock = std::chrono::high_resolution_clock::now();
 
 	file.read(buffer, sizeof(buffer));
-	while ((readed = file.gcount()) != 0)
-	{
 
+	if (file.eof())
+		Send(device, "EOF");
+	else
 		sended = send(device.m_Socket, (char*)buffer, readed, 0);
-		file.read(buffer, sizeof(buffer));
 
-		WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
-			NIX(if (sended < 0))
-		{
-			device.m_Status = ConnectedDevice::Status::Disabled;
-			counter-= 100;
-			device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * MSG_SIZE, "");
-			return false;
-		}
-
-
-		counter++;
+	
+	WIN(if (WSAGetLastError() == WSAECONNRESET || WSAGetLastError() == WSAETIMEDOUT))
+		NIX(if (sended < 0))
+	{
+		device.m_Status = ConnectedDevice::Status::Disabled;
+		counter-= 100;
+		device.m_CLInfo = ConnectionLostInfo(ConnectionLostInfo::Status::download, counter * MSG_SIZE, "");
+		return false;
 	}
 
-	auto end = std::chrono::system_clock::now();
-	std::cout << (static_cast<double>(MSG_SIZE * counter) / MB) / 
-		std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "\n";
 
-	WIN(Sleep(1000));
-	NIX(sleep(1000));
 
-	send(device.m_Socket, (char*)MEOF, sizeof(MEOF), 0);
 
 	return true;
 }
