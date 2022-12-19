@@ -147,7 +147,7 @@ int main()
 		}
 	}
 
-	for (auto pi : PIs)
+	for (pi : PIs)
 	{
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
